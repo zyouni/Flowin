@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title>방 타이머 시스템 v2.0</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+            margin: 0;
+            padding: 0;
+        }
+        h1 {
+            text-align: center;
+            color: #fff;    
+            margin-top: 32px;
+            margin-bottom: 16px;
+            font-size: 2.2rem;
+        }
+        .container {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-areas:
+                "a b c d e"
+                ". . f g h";
+            gap: 12px 8px;
+            max-width: 1200px;
+            margin: 0 auto 24px auto;
+            justify-content: center;
+            justify-items: center;
+            align-items: start;
+        }
+        .room-card {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            width: 200px;
+            padding: 32px 4px 4px 8px;
+            margin-top: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            border: 4px solid #a259e6;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .blink-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(162, 89, 230, 0.35);
+            pointer-events: none;
+            opacity: 0;
+            z-index: 1;
+        }
+        .room-card.blink .blink-overlay {
+            animation: blink-fade 0.5s linear infinite alternate;
+        }
+        @keyframes blink-fade {
+            0%   { opacity: 0.7; }
+            100% { opacity: 0; }
+        }
+        .done-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            bottom: auto;
+            transform: translate(-50%, -50%);
+            background: #ff4081;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 14px 0;
+            min-width: 120px;
+            width: 60%;
+            font-size: 1.3rem;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            z-index: 4;
+            display: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .room-card.blink .done-btn {
+            display: block;
+        }
+        .room-title {
+            position: absolute;
+            top: 8px;
+            right: 10px;
+            margin: 0;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #7b1fa2;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.2s;
+        }
+        .room-title:hover {
+            color: #9c27b0;
+            transform: scale(1.05);
+        }
+        .timer-row {
+            margin-bottom: 6px;
+            margin-top: 0;
+        }
+        .timer-emoji {
+            font-size: 2rem;
+        }
+        .timer-display {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #512da8;
+            letter-spacing: 2px;
+            min-width: 70px;
+            text-align: center;
+        }
+        .controls {
+            margin-top: 6px;
+            margin-bottom: 0;
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+        }
+        .controls button {
+            font-size: 1rem;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #b388ff;
+            color: #fff;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .play-btn, .stop-btn {
+            padding: 5px 0px;
+            min-width: 40px;
+            width: 48px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        .reset-btn {
+            padding: 5px 5px;
+            min-width: 64px;
+            font-size: 1.6rem;
+        }
+        .done-btn-small {
+            padding: 5px 5px;
+            min-width: 64px;
+            font-size: 1.6rem;
+            background: #ff4081 !important;
+            color: #fff !important;
+            border: none;
+        }
+        .controls button:disabled {
+            background: #e0e0e0;
+            color: #aaa;
+            cursor: not-allowed;
+        }
+        @media (max-width:200px) {
+            .container {
+                grid-template-columns: repeat(2, 1fr);
+                grid-template-areas:
+                    "a b"
+                    "c d"
+                    "e f"
+                    "g h";
+                max-width: 200px;
+                justify-items: center;
+            }
+            .room-card {
+                width: 250px;
+                padding: 20px 14px 16px 14px;
+            }
+            .timer-display { font-size: 2rem; }
+            .room-title { font-size: 1.05rem; }
+        }
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: repeat(4, 1fr);
+                grid-template-areas:
+                    "a b c d"
+                    "e f g h";
+                max-width: 98vw;
+                gap: 0px 0px;
+                justify-items: center;
+            }
+            .room-card {
+                width: 180px;
+                padding: 2px 2px 2px 2px;
+                margin: 0;
+                border-width: 2px;
+                border-radius: 0;
+                box-shadow: none;
+            }
+            .timer-display { font-size: 1.35rem; }
+            .room-title { font-size: 0.95rem; color: #ff4081; font-weight: bold; }
+            .timer-emoji { display: none; }
+            .timer-row {
+                margin-top: 35px;
+                margin-bottom: 4px;
+            }
+            .controls {
+                margin-top: 0;
+                gap: 4px;
+            }
+            .controls button, .reset-btn, .play-btn, .stop-btn, .done-btn-small {
+                font-size: 0.8rem;
+                padding: 2px 4px;
+                min-width: 18px;
+                border-radius: 3px;
+            }
+        }
+        .timer-adjust {
+            display: inline-flex;
+            flex-direction: column;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+        .adjust-up, .adjust-down {
+            background: none;
+            border: none;
+            color: #a259e6;
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        .adjust-up:hover, .adjust-down:hover {
+            color: #7c4dff;
+        }
+        /* 각 카드의 grid-area 지정 - 새로운 방 배치에 맞춤 */
+        .card-0 { grid-area: a; } /* 상쾌 */
+        .card-1 { grid-area: b; } /* 미소 */
+        .card-2 { grid-area: c; } /* 편안 */
+        .card-3 { grid-area: d; } /* 감각 */
+        .card-4 { grid-area: e; } /* 행복 */
+        .card-5 { grid-area: f; } /* 처음2 */
+        .card-6 { grid-area: g; } /* 두뇌 */
+        .card-7 { grid-area: h; } /* 처음1 */
+        .name-input {
+            position: absolute;
+            top: 8px;
+            left: 10px;
+            width: 80px;
+            padding: 1px 3px;
+            border: 1px solid #b388ff;
+            border-radius: 5px;
+            font-size: 0.85rem;
+            background: #f7f3ff;
+            color: #512da8;
+            z-index: 3;
+            transition: opacity 0.2s;
+        }
+        /* 이름 입력창은 항상 보임 */
+        @media (max-width: 350px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-areas:
+                    "a"
+                    "b"
+                    "c"
+                    "d"
+                    "e"
+                    "f"
+                    "g"
+                    "h";
+                max-width: 98vw;
+                gap: 4px 2px;
+                justify-items: center;
+            }
+            .room-card {
+                width: 98vw;
+                max-width: 160px;
+                padding: 4px 2px 4px 2px;
+                border-width: 2px;
+                border-radius: 10px;
+            }
+            .timer-row {
+                margin-bottom: 2px;
+            }
+            .timer-emoji {
+                font-size: 1.1rem;
+            }
+            .timer-display {
+                font-size: 1.1rem;
+                min-width: 40px;
+            }
+            .controls {
+                margin-top: 2px;
+                gap: 2px;
+            }
+            .controls button, .reset-btn, .play-btn, .stop-btn {
+                font-size: 0.8rem;
+                padding: 2px 4px;
+                min-width: 28px;
+                border-radius: 4px;
+            }
+            .name-label-container {
+                width: 60px;
+            }
+            .patient-name {
+                font-size: 0.7rem;
+            }
+            .room-title {
+                font-size: 0.8rem;
+                top: 4px;
+                right: 4px;
+            }
+            .done-btn {
+                font-size: 0.9rem;
+                min-width: 60px;
+                padding: 6px 0;
+                border-radius: 4px;
+            }
+        }
+        .main-title {
+            text-align: center;
+            color: #fff;
+            margin-top: 32px;
+            margin-bottom: 16px;
+            font-size: 2.2rem;
+        }
+        @media (max-width: 900px) {
+            .main-title { display: none; }
+        }
+        
+        /* 컨텍스트 메뉴 스타일 */
+        .context-menu {
+            position: fixed;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 8px 0;
+            z-index: 1000;
+            display: none;
+            min-width: 120px;
+        }
+        
+        .context-menu-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            color: #333;
+            transition: background-color 0.2s;
+        }
+        
+        .context-menu-item:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .context-menu-item.danger {
+            color: #d32f2f;
+        }
+        
+        .context-menu-item.danger:hover {
+            background-color: #ffebee;
+        }
+    </style>
+</head>
+<body>
+    <h1 class="main-title">방 타이머 시스템 v2.0 <span style="font-size:1.3rem;">⏰</span></h1>
+    <div class="container" id="roomsContainer">
+        <!-- JS로 카드 생성 -->
+    </div>
+    <div style="text-align: center; margin-top: 20px; margin-bottom: 20px;">
+        <button id="refreshNames" style="
+            background: #b388ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        " onmouseover="this.style.background='#9575cd'" onmouseout="this.style.background='#b388ff'">
+            🔄 이름 새로고침
+        </button>
+    </div>
+    
+    <!-- 컨텍스트 메뉴 -->
+    <div id="contextMenu" class="context-menu">
+        <div class="context-menu-item danger" id="endTreatment">진료끝</div>
+    </div>
+    <audio id="alarmSound" src="beep.mp3" loop></audio>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+    const ROOMS = [
+        { name: '상쾌' },
+        { name: '편안' },
+        { name: '행복' },
+        { name: '두뇌' },
+        { name: '처음1' },
+        { name: '미소' },
+        { name: '감각' },
+        { name: '처음2' }
+    ];
+    const roomsContainer = document.getElementById('roomsContainer');
+    const alarmSound = document.getElementById('alarmSound');
+        const socket = io();
+    // 각 방별로 상태 저장
+    const roomStates = {};
+    // 카드 생성
+    ROOMS.forEach((room, idx) => {
+        const card = document.createElement('div');
+        card.className = `room-card card-${idx}`;
+        card.id = `card-${room.name}`;
+        card.innerHTML = `
+            <div class="blink-overlay"></div>
+            <div class="name-label-container">
+                <button class="label-cycle-btn" id="label-${room.name}" title="치료 라벨 변경"></button>
+            </div>
+            <button class="done-btn" id="done-${room.name}">발침완료</button>
+            <div class="room-title" id="title-${room.name}">${room.name} ${room.emoji}</div>
+            <div class="patient-name" id="patient-${room.name}"></div>
+            <div class="timer-row">
+                <span class="timer-emoji">⏳</span>
+                <span class="timer-display" id="timer-${room.name}">00:00</span>
+                <span class="timer-adjust">
+                    <button class="adjust-up" id="up-${room.name}">▲</button>
+                    <button class="adjust-down" id="down-${room.name}">▼</button>
+                </span>
+            </div>
+            <div class="controls">
+                <button id="start-${room.name}" class="play-btn timer-btn">▶</button>
+                <button id="stop-${room.name}" class="stop-btn timer-btn" style="display:none;">⏸</button>
+                <button id="reset-${room.name}" class="reset-btn">Reset</button>
+                <button id="done-small-${room.name}" class="done-btn-small">발침</button>
+            </div>
+        `;
+        roomsContainer.appendChild(card);
+        // 상태 초기화
+        roomStates[room.name] = { isRunning: false, timeLeft: 0 };
+
+        // 발침완료 버튼 이벤트
+        document.getElementById(`done-${room.name}`).onclick = () => {
+            socket.emit('doneAlarm', { room: room.name });
+        };
+        
+        // 방 제목 클릭 시 문 앞 화면(room2)으로 이동
+        const titleEl = document.getElementById(`title-${room.name}`);
+        titleEl.addEventListener('click', (e) => {
+            e.stopPropagation();
+            window.location.href = `/room2/${encodeURIComponent(room.name)}`;
+        });
+        
+        // 우클릭 컨텍스트 메뉴 이벤트 등록
+        card.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            currentContextRoom = room.name;
+            
+            // 컨텍스트 메뉴 위치 설정
+            contextMenu.style.left = e.pageX + 'px';
+            contextMenu.style.top = e.pageY + 'px';
+            contextMenu.style.display = 'block';
+        });
+        
+        // 라벨 순환 버튼 이벤트
+        const labelBtn = document.getElementById(`label-${room.name}`);
+        let currentLabelIndex = 0;
+        const labels = ['', '침', '부항', '뜸', '진료중', '상담중', '대기중', '안내중'];
+        
+        labelBtn.onclick = () => {
+            currentLabelIndex = (currentLabelIndex + 1) % labels.length;
+            const newLabel = labels[currentLabelIndex];
+            
+            // 서버에 라벨 업데이트 전송
+            socket.emit('updateLabel', { room: room.name, label: newLabel });
+            
+            // 버튼 색상 변경으로 현재 라벨 표시
+            if (newLabel === '침') {
+                labelBtn.style.background = '#ffeb3b';
+                labelBtn.style.color = 'white';
+            } else if (newLabel === '부항') {
+                labelBtn.style.background = '#4caf50';
+                labelBtn.style.color = 'white';
+            } else if (newLabel === '뜸') {
+                labelBtn.style.background = '#f44336';
+                labelBtn.style.color = 'white';
+            } else if (newLabel === '진료중') {
+                labelBtn.style.background = '#5D3A6B';
+                labelBtn.style.color = 'white';
+            } else if (newLabel === '상담중') {
+                labelBtn.style.background = '#7b1fa2';
+                labelBtn.style.color = 'white';
+            } else if (newLabel === '대기중') {
+                labelBtn.style.background = '#ff8c00';
+                labelBtn.style.color = 'white';
+            } else if (newLabel === '안내중') {
+                labelBtn.style.background = '#007bff';
+                labelBtn.style.color = 'white';
+            } else {
+                labelBtn.style.background = '#f7f3ff';
+                labelBtn.style.color = '#512da8';
+            }
+        };
+    });
+
+    // 이름 입력창 스타일 추가
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .name-label-container {
+            position: absolute;
+            top: 8px;
+            left: 10px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            z-index: 3;
+        }
+        .patient-name {
+            position: absolute;
+            top: 8px;
+            left: 35px;
+            font-size: 0.85rem;
+            color: #512da8;
+            font-weight: bold;
+            z-index: 3;
+        }
+        .label-cycle-btn {
+            width: 20px;
+            height: 20px;
+            border: none;
+            border-radius: 50%;
+            background: #f7f3ff;
+            color: #512da8;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .label-cycle-btn:hover {
+            opacity: 0.8;
+        }
+    `;
+    document.head.appendChild(style);
+
+    // 타이머 포맷
+    function formatTime(seconds) {
+        const min = Math.floor(seconds / 60);
+        const sec = seconds % 60;
+        return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+    }
+
+    // 버튼 이벤트 등록
+    ROOMS.forEach(room => {
+        document.getElementById(`start-${room.name}`).onclick = () => {
+            // 현재 표시된 시간 읽기
+            const timerText = document.getElementById(`timer-${room.name}`).textContent;
+            const [min, sec] = timerText.split(':').map(Number);
+            const duration = min * 60 + sec;
+            
+            // 현재 라벨 상태 가져오기
+            const currentLabel = roomStates[room.name] ? roomStates[room.name].label : '';
+            
+            // 0초면 15분(900초)로, 아니면 현재 값으로 시작
+            socket.emit('startTimer', { room: room.name, duration: duration > 0 ? duration : 900, force: true, label: currentLabel });
+        };
+        document.getElementById(`stop-${room.name}`).onclick = () => {
+            socket.emit('stopTimer', { room: room.name });
+        };
+        document.getElementById(`reset-${room.name}`).onclick = () => {
+            socket.emit('resetTimer', { room: room.name });
+        };
+        document.getElementById(`done-small-${room.name}`).onclick = () => {
+            socket.emit('doneAlarm', { room: room.name });
+        };
+        document.getElementById(`up-${room.name}`).onclick = () => {
+            socket.emit('adjustTimer', { room: room.name, diff: 60 }); // 1분 증가
+        };
+        document.getElementById(`down-${room.name}`).onclick = () => {
+            socket.emit('adjustTimer', { room: room.name, diff: -60 }); // 1분 감소
+        };
+    });
+
+        socket.on('timerState', ({ room, state }) => {
+        roomStates[room] = state;
+        const timerEl = document.getElementById(`timer-${room}`);
+        
+        // 카운트업 모드와 일반 모드 구분하여 표시
+        // 검사중도 카운트업 모드로 간주
+        const isCountUpLike = state.isCountUp || state.label === '검사중';
+        if (isCountUpLike) {
+            // 카운트업 모드: 경과 시간 표시 (예: "진료중 05:23")
+            timerEl.textContent = formatTime(state.timeLeft);
+            timerEl.style.color = '#ff4081'; // 핑크색으로 구분
+        } else {
+            // 일반 모드: 남은 시간 표시 (예: "12:45")
+            timerEl.textContent = formatTime(state.timeLeft);
+            timerEl.style.color = '#512da8'; // 기본 색상
+        }
+
+        const titleEl = document.getElementById(`title-${room}`);
+        if (titleEl) {
+            let cleanRoomName = room;
+            if (window.innerWidth <= 900 && !room.startsWith('처음')) {
+                cleanRoomName = room.replace('방', '');
+            }
+
+            if (state.label && state.label.trim()) {
+                titleEl.textContent = `${cleanRoomName}(${state.label.trim()})`;
+            } else {
+                titleEl.textContent = `${cleanRoomName}`;
+            }
+        }
+
+        // 라벨 버튼 색상 업데이트
+        const labelBtn = document.getElementById(`label-${room}`);
+        if (labelBtn) {
+            if (state.label === '침') {
+                labelBtn.style.background = '#ffeb3b';
+                labelBtn.style.color = 'white';
+            } else if (state.label === '부항') {
+                labelBtn.style.background = '#4caf50';
+                labelBtn.style.color = 'white';
+            } else if (state.label === '뜸') {
+                labelBtn.style.background = '#f44336';
+                labelBtn.style.color = 'white';
+            } else if (state.label === '진료중') {
+                labelBtn.style.background = '#5D3A6B';
+                labelBtn.style.color = 'white';
+            } else if (state.label === '상담중') {
+                labelBtn.style.background = '#7b1fa2';
+                labelBtn.style.color = 'white';
+            } else if (state.label === '대기중') {
+                labelBtn.style.background = '#ff8c00';
+                labelBtn.style.color = 'white';
+            } else if (state.label === '안내중') {
+                labelBtn.style.background = '#007bff';
+                labelBtn.style.color = 'white';
+            } else {
+                // 빈 문자열이거나 라벨이 없으면 기본 색상
+                labelBtn.style.background = '#f7f3ff';
+                labelBtn.style.color = '#512da8';
+            }
+        }
+
+        // 이하 기존 버튼/알림 상태 그대로
+        document.getElementById(`reset-${room}`).disabled = false;
+        const playBtn = document.getElementById(`start-${room}`);
+        const stopBtn = document.getElementById(`stop-${room}`);
+        if (state.isRunning) {
+            playBtn.style.display = 'none';
+            stopBtn.style.display = '';
+        } else {
+            playBtn.style.display = '';
+            stopBtn.style.display = 'none';
+        }
+
+        // 카운트업 모드에서는 타이머 조정 버튼 비활성화
+        const upBtn = document.getElementById(`up-${room}`);
+        const downBtn = document.getElementById(`down-${room}`);
+        if (isCountUpLike) {
+            if (upBtn) upBtn.disabled = true;
+            if (downBtn) downBtn.disabled = true;
+        } else {
+            if (upBtn) upBtn.disabled = false;
+            if (downBtn) downBtn.disabled = false;
+        }
+
+        // 타이머 상태에 따른 알림 효과 처리
+        const card = document.getElementById(`card-${room}`);
+        const overlay = card.querySelector('.blink-overlay');
+        
+        // 타이머가 종료된 상태가 아니면 blink 제거
+        if (!state.wasRunning || state.timeLeft > 0) {
+            card.classList.remove('blink');
+            if (overlay) overlay.style.opacity = 0;
+            alarmSound.pause();
+            alarmSound.currentTime = 0;
+        }
+        
+        [
+            `start-${room}`, `stop-${room}`, `reset-${room}`,
+            `up-${room}`, `down-${room}`, `done-small-${room}`
+        ].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.disabled = false;
+        });
+    });
+
+    // 타이머 종료 시 발침완료 버튼 표시
+    socket.on('timerEnded', ({ room }) => {
+        console.log(`⏰ 타이머 종료: ${room} - 발침완료 버튼 표시`);
+        const card = document.getElementById(`card-${room}`);
+        if (card) {
+            card.classList.add('blink');
+            // 알림음 재생
+            alarmSound.play().catch(e => console.log('알림음 재생 실패:', e));
+        }
+    });
+
+    // doneAlarm 들어오면 다시 원래 이름으로
+    socket.on('doneAlarm', ({ room, label }) => {
+        const titleEl = document.getElementById(`title-${room}`);
+        if (titleEl) {
+            let cleanRoomName = room;
+            cleanRoomName = room.replace('방', '');
+            titleEl.textContent = `${cleanRoomName}`;
+        }
+
+        const card = document.getElementById(`card-${room}`);
+        const overlay = card.querySelector('.blink-overlay');
+        card.classList.remove('blink');
+        alarmSound.pause();
+        alarmSound.currentTime = 0;
+        if (overlay) overlay.style.opacity = 0;
+        [
+            `start-${room}`, `stop-${room}`, `reset-${room}`,
+            `up-${room}`, `down-${room}`, `done-small-${room}`
+        ].forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) btn.disabled = false;
+        });
+    });
+
+    socket.on('nameUpdate', ({ room, name, recordId }) => {
+        const nameEl = document.getElementById(`patient-${room}`);
+        if (nameEl) {
+            nameEl.textContent = name;
+            console.log(`💡 ${room}: ${name} (${recordId})`);
+        } else {
+            console.warn(`⚠️ '${room}'에 해당하는 환자 이름 표시 영역이 없음`);
+        }
+    });
+
+    function updateRoomTitlesForCompact() {
+        ROOMS.forEach(room => {
+            const titleEl = document.getElementById(`title-${room.name}`);
+            if (!titleEl) return;
+            // 방 글자만 제거 (처음1, 처음2도 동일 처리)
+            const shortName = room.name.replace('방', '');
+            titleEl.textContent = shortName;
+        });
+    }
+    window.addEventListener('resize', updateRoomTitlesForCompact);
+    window.addEventListener('DOMContentLoaded', updateRoomTitlesForCompact);
+
+    // 폴링 기능 제거됨
+
+    // 컨텍스트 메뉴 관련 변수
+    let currentContextRoom = null;
+    const contextMenu = document.getElementById('contextMenu');
+    const endTreatmentBtn = document.getElementById('endTreatment');
+    
+    // 진료끝 버튼 클릭 이벤트
+    endTreatmentBtn.addEventListener('click', () => {
+        if (currentContextRoom) {
+            console.log(`🏥 진료끝 요청: ${currentContextRoom}`);
+            socket.emit('endTreatment', { room: currentContextRoom });
+        }
+        contextMenu.style.display = 'none';
+    });
+    
+    // 다른 곳 클릭하면 컨텍스트 메뉴 닫기
+    document.addEventListener('click', () => {
+        contextMenu.style.display = 'none';
+    });
+    
+    // ESC 키로 컨텍스트 메뉴 닫기
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            contextMenu.style.display = 'none';
+        }
+    });
+    
+    // 이름 새로고침 버튼 이벤트
+    document.getElementById('refreshNames').onclick = () => {
+        console.log('🔄 이름 새로고침 요청');
+        socket.emit('refreshNames');
+    };
+
+    // 서버에서 이름 새로고침 응답 받기
+    socket.on('namesRefreshed', (data) => {
+        console.log('💡 이름 새로고침 완료:', data);
+        
+        // 이름 업데이트
+        const names = data.names || data;
+        Object.keys(names).forEach(room => {
+            const nameEl = document.getElementById(`patient-${room}`);
+            if (nameEl) {
+                nameEl.textContent = names[room] || '';
+            }
+        });
+        
+        // 점유 상태에 따른 배경색 변경
+        if (data.occupied) {
+            Object.keys(data.occupied).forEach(room => {
+                const card = document.getElementById(`card-${room}`);
+                const nameEl = document.getElementById(`patient-${room}`);
+                if (card) {
+                    if (data.occupied[room]) {
+                        // 점유 중인 방 - 연보라색 배경, 원래 테두리 색상 유지
+                        card.style.background = '#f3e5f5';
+                        card.style.borderColor = '#a259e6';
+                    } else {
+                        // 빈 방 - 원래 색상, 이름 숨김
+                        card.style.background = '#fff';
+                        card.style.borderColor = '#a259e6';
+                        if (nameEl) {
+                            nameEl.textContent = '';
+                        }
+                    }
+                }
+            });
+        }
+    });
+    </script>
+</body>
+</html>

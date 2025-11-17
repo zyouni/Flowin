@@ -1,0 +1,1836 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title>방 타이머</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #6d2422;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px;
+            color: #fff;
+        }
+        
+        .container {
+            background: #f4f3f1;
+            border-radius: 20px;
+            padding: clamp(10px, 1.5vw, 25px);
+            max-width: 100vw;
+            width: 100%;
+            height: 100vh;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            gap: clamp(15px, 3vw, 30px);
+        }
+        
+        .top-row {
+            display: flex;
+            flex-direction: row;
+            gap: clamp(15px, 3vw, 30px);
+            flex: 1;
+        }
+        
+        .bottom-row {
+            display: flex;
+            flex-direction: row;
+            gap: clamp(15px, 3vw, 30px);
+            flex: 1;
+        }
+        
+        .room-name {
+            font-size: clamp(1.8rem, 4vw, 3rem);
+            font-weight: bold;
+            color: #ac4b5c;
+            margin-bottom: clamp(10px, 2vw, 20px);
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .patient-info {
+            background: #e6bfc6;
+            border-radius: 15px;
+            padding: clamp(15px, 2.5vw, 25px);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            min-height: 0;
+        }
+        
+        .patient-info-title {
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            color: #ac4b5c;
+            margin-bottom: clamp(10px, 2vw, 15px);
+            font-weight: 600;
+        }
+        
+        .patient-table {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: clamp(8px, 1.5vw, 15px);
+            width: 100%;
+            max-width: 100%;
+        }
+        
+        .patient-cell {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: clamp(8px, 1.5vw, 12px);
+            background: transparent;
+            border-radius: 8px;
+        }
+        
+        .patient-label {
+            font-size: clamp(0.8rem, 2vw, 1.2rem);
+            color: #ac4b5c;
+            margin-bottom: clamp(4px, 1vw, 8px);
+            font-weight: 600;
+        }
+        
+        .patient-value {
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            font-weight: bold;
+            color: #ac4b5c;
+            word-break: keep-all;
+            line-height: 1.2;
+        }
+        
+        .patient-value.empty {
+            color: #999999;
+            font-size: clamp(0.9rem, 2vw, 1.3rem);
+        }
+        
+        .timer-section {
+            background: #e6bfc6;
+            border-radius: 15px;
+            padding: clamp(15px, 2.5vw, 25px);
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: stretch;
+            gap: clamp(15px, 3vw, 25px);
+        }
+        
+        /* 왼쪽: 치료 버튼과 침 갯수 컨테이너 (가로 배치) */
+        .treatment-controls-container {
+            flex: 1;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: clamp(10px, 2vw, 15px);
+        }
+        
+        /* 치료 버튼 세로 정렬 */
+        .treatment-controls-vertical {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: clamp(10px, 2vw, 15px);
+        }
+        
+        /* 오른쪽: 타이머 메인 영역 (4의 비율) */
+        .timer-main-area {
+            flex: 4;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .treatment-label {
+            font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+            color: #ac4b5c;
+            margin-bottom: 12px;
+            font-weight: 600;
+            min-height: clamp(35px, 6vw, 60px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .treatment-label.empty {
+            font-size: clamp(1.3rem, 3vw, 1.8rem);
+            color: #999999;
+        }
+        
+        .timer-display {
+            font-size: clamp(3rem, 10vw, 5rem);
+            font-weight: bold;
+            color: #ac4b5c;
+            letter-spacing: clamp(3px, 1.5vw, 10px);
+        }
+        
+        .timer-display.countup {
+            color: #A04050;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: #4caf50;
+            margin-left: 15px;
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
+            animation: pulse 2s infinite;
+        }
+        
+        .status-indicator.inactive {
+            background: #bdbdbd;
+            box-shadow: none;
+            animation: none;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.7;
+                transform: scale(1.1);
+            }
+        }
+        
+        
+        .treatment-complete-btn {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #f4f3f1;
+            color: #ac4b5c;
+            padding: clamp(30px, 6vw, 60px);
+            border-radius: 20px;
+            border: 4px solid #ac4b5c;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 999;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            display: none; /* 타이머 종료 시에만 표시 */
+        }
+        
+        .treatment-complete-btn:hover {
+            background: #d4a9b1;
+            transform: translate(-50%, -50%) scale(1.05);
+        }
+        
+        .complete-content h2 {
+            font-size: clamp(2rem, 5vw, 4rem);
+            font-weight: bold;
+            margin: 0 0 10px 0;
+            color: #ac4b5c;
+        }
+        
+        .complete-content p {
+            font-size: clamp(1rem, 3vw, 1.5rem);
+            margin: 0;
+            color: #ac4b5c;
+        }
+        
+        .alert-message {
+            background: white;
+            color: #d32f2f;
+            padding: 40px 60px;
+            border-radius: 20px;
+            font-size: 4rem;
+            font-weight: bold;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .footer {
+            margin-top: 20px;
+            font-size: 1.2rem;
+            color: #ac4b5c;
+            opacity: 0.7;
+        }
+        
+        .treatment-progress {
+            background: #e6bfc6;
+            border-radius: 15px;
+            padding: clamp(15px, 2.5vw, 25px);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .progress-title {
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            color: #ac4b5c;
+            margin-bottom: clamp(10px, 2vw, 15px);
+            font-weight: 600;
+        }
+        
+        /* Timeline layout */
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: clamp(8px, 1.2vw, 14px);
+            padding: clamp(4px, 1vw, 8px) clamp(6px, 1vw, 12px);
+        }
+        .timeline-row {
+            display: flex;
+            align-items: center;
+            gap: 0; /* dots and lines should touch */
+        }
+        .timeline-labels {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: clamp(8px, 1.5vw, 16px);
+        }
+        .segment { flex: 1 1 0; display: flex; align-items: center; justify-content: center; }
+        .step-wrap { display: flex; align-items: center; flex: 1 1 0; }
+        .step-wrap.last { flex: 0 0 auto; }
+        
+        /* 선택 치료 (부항, 뜸) 레이아웃 */
+        .optional-treatments {
+            display: flex;
+            justify-content: center;
+            gap: clamp(20px, 4vw, 40px);
+            margin-top: clamp(15px, 3vw, 25px);
+            padding-top: clamp(10px, 2vw, 15px);
+        }
+        .optional-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: clamp(6px, 1.2vw, 10px);
+        }
+        .timeline-dot {
+            width: clamp(18px, 3vw, 30px);
+            height: clamp(18px, 3vw, 30px);
+            border-radius: 50%;
+            border: 4px solid #9e9e9e; /* pending border */
+            background: #ffffff;      /* pending inside */
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+        }
+        .timeline-dot.completed {
+            background: #2e7d32;      /* default green for general completed */
+            border-color: #2e7d32;
+        }
+        
+        /* 치료별 색상 */
+        .timeline-dot.completed.심상 {
+            background: #e91e63;      /* 분홍색 - 상담중 */
+            border-color: #e91e63;
+        }
+        
+        .timeline-dot.completed.원상 {
+            background: #9c27b0;      /* 보라색 - 진료중 */
+            border-color: #9c27b0;
+        }
+        
+        .timeline-dot.completed.침 {
+            background: #ff9800;      /* 노란색 - 침 */
+            border-color: #ff9800;
+        }
+        
+        .timeline-dot.completed.부항 {
+            background: #4caf50;      /* 초록색 - 부항 */
+            border-color: #4caf50;
+        }
+        
+        .timeline-dot.completed.뜸 {
+            background: #f44336;      /* 빨간색 - 뜸 */
+            border-color: #f44336;
+        }
+        .timeline-dot.in-progress {
+            background: #ffffff;      /* hollow with green border */
+            border-color: #2e7d32;
+            animation: pulse-glow 1.8s infinite;
+        }
+        
+        /* 진행중 상태별 색상 */
+        .timeline-dot.in-progress.심상 {
+            border-color: #e91e63;    /* 분홍색 테두리 */
+            animation: pulse-pink 1.8s infinite;
+        }
+        
+        .timeline-dot.in-progress.원상 {
+            border-color: #9c27b0;    /* 보라색 테두리 */
+            animation: pulse-purple 1.8s infinite;
+        }
+        
+        .timeline-dot.in-progress.침 {
+            border-color: #ffeb3b;    /* 노란색 테두리 */
+            background: #ffffff;     /* 빈 원 */
+            animation: pulse-fill-yellow 1.8s infinite;
+        }
+        
+        .timeline-dot.in-progress.부항 {
+            border-color: #4caf50;    /* 초록색 테두리 */
+            animation: pulse-green 1.8s infinite;
+        }
+        
+        .timeline-dot.in-progress.뜸 {
+            border-color: #f44336;    /* 빨간색 테두리 */
+            animation: pulse-red 1.8s infinite;
+        }
+        
+        @keyframes pulse-pink {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(233, 30, 99, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(233, 30, 99, 0);
+            }
+        }
+        
+        @keyframes pulse-purple {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(156, 39, 176, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(156, 39, 176, 0);
+            }
+        }
+        
+        @keyframes pulse-yellow {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(255, 235, 59, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(255, 235, 59, 0);
+            }
+        }
+        
+        @keyframes pulse-green {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(76, 175, 80, 0);
+            }
+        }
+        
+        @keyframes pulse-red {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(244, 67, 54, 0);
+            }
+        }
+        
+        @keyframes pulse-fill-yellow {
+            0%, 100% {
+                background: #ffffff;     /* 빈 원 */
+                box-shadow: 0 0 0 0 rgba(255, 235, 59, 0.7);
+            }
+            50% {
+                background: #ffeb3b;     /* 채워진 원 */
+                box-shadow: 0 0 0 10px rgba(255, 235, 59, 0);
+            }
+        }
+        .timeline-line {
+            flex: 1 1 auto;
+            height: 6px;
+            background: #bdbdbd;
+            margin: 0; /* directly touch the dot */
+            border-radius: 0; /* no rounded corners */
+        }
+        .timeline-line.solid {
+            background: #424242; /* 진한 회색 */
+        }
+        .timeline-line.dotted {
+            background: repeating-linear-gradient(90deg, #bdbdbd 0 10px, transparent 10px 18px);
+            height: 6px;
+        }
+        .timeline-label {
+            font-size: clamp(0.8rem, 2vw, 1rem);
+            white-space: nowrap;
+        }
+        .timeline-label.completed { color: #2e7d32; }
+        .timeline-label.in-progress { color: #2e7d32; }
+        .timeline-label.pending { color: #9e9e9e; }
+        
+        /* 치료별 라벨 색상 */
+        .timeline-label.completed.심상 { color: #e91e63; }
+        .timeline-label.completed.원상 { color: #9c27b0; }
+        .timeline-label.completed.침 { color: #ff9800; }
+        .timeline-label.completed.부항 { color: #4caf50; }
+        .timeline-label.completed.뜸 { color: #f44336; }
+        
+        /* 진행중 라벨 색상 */
+        .timeline-label.in-progress.심상 { color: #e91e63; }
+        .timeline-label.in-progress.원상 { color: #9c27b0; }
+        .timeline-label.in-progress.침 { color: #d4af37; }
+        .timeline-label.in-progress.부항 { color: #4caf50; }
+        .timeline-label.in-progress.뜸 { color: #f44336; }
+        
+        .treatment-item {
+            background: white;
+            border-radius: 15px;
+            padding: clamp(15px, 3vw, 25px);
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .treatment-item.completed {
+            background: linear-gradient(135deg, #4caf50 0%, #66bb6a 100%);
+            color: white;
+            transform: scale(1.05);
+        }
+        
+        .treatment-item.in-progress {
+            background: linear-gradient(135deg, #ff9800 0%, #ffb74d 100%);
+            color: white;
+            animation: pulse-glow 2s infinite;
+        }
+        
+        .treatment-item.pending {
+            background: #f5f5f5;
+            color: #9e9e9e;
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(255, 235, 59, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(255, 235, 59, 0);
+            }
+        }
+        
+        .treatment-name {
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        
+        .treatment-status {
+            font-size: clamp(0.8rem, 2vw, 1.2rem);
+            font-weight: 500;
+        }
+        
+        .treatment-icon {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            margin-bottom: 10px;
+        }
+        
+        /* 온열 제어 스타일 */
+        .heating-control {
+            background: #e6bfc6;
+            border-radius: 15px;
+            padding: clamp(15px, 2.5vw, 25px);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .heating-label {
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            color: #ac4b5c;
+            margin-bottom: clamp(10px, 2vw, 15px);
+            font-weight: 600;
+        }
+        
+        .heating-main {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        
+        .heating-toggle-btn {
+            width: clamp(100px, 18vw, 140px);
+            height: clamp(100px, 18vw, 140px);
+            border-radius: 50%;
+            border: 3px solid #ac4b5c;
+            background: #f4f3f1;
+            color: #ac4b5c;
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .heating-toggle-btn.on {
+            background: #ac4b5c;
+            color: white;
+        }
+        
+        .heating-toggle-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .expand-btn {
+            position: absolute;
+            top: clamp(5px, 1vw, 10px);
+            left: clamp(5px, 1vw, 10px);
+            width: clamp(25px, 5vw, 35px);
+            height: clamp(25px, 5vw, 35px);
+            border: 2px solid #ac4b5c;
+            border-radius: 50%;
+            background: #f4f3f1;
+            color: #ac4b5c;
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .expand-btn:hover {
+            background: #ac4b5c;
+            color: white;
+        }
+        
+        .treatment-screen {
+            padding: clamp(10px, 2vw, 15px);
+            background: #f4f3f1;
+            border-radius: 10px;
+            border: 2px solid #ac4b5c;
+            position: relative;
+        }
+        
+        .back-btn {
+            position: absolute;
+            top: clamp(5px, 1vw, 10px);
+            left: clamp(5px, 1vw, 10px);
+            width: clamp(25px, 5vw, 35px);
+            height: clamp(25px, 5vw, 35px);
+            border: 2px solid #ac4b5c;
+            border-radius: 50%;
+            background: #f4f3f1;
+            color: #ac4b5c;
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .back-btn:hover {
+            background: #ac4b5c;
+            color: white;
+        }
+        
+        .treatment-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: clamp(8px, 1.5vw, 12px);
+            margin-top: clamp(20px, 4vw, 30px);
+        }
+        
+        .treatment-btn {
+            padding: clamp(12px, 2.5vw, 20px);
+            border: 2px solid #ac4b5c;
+            border-radius: 10px;
+            background: #f4f3f1;
+            color: #ac4b5c;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .treatment-btn:hover {
+            background: #d4a9b1;
+            transform: translateY(-1px);
+        }
+        
+        .treatment-btn.active {
+            background: #ac4b5c;
+            color: white;
+        }
+        
+        .treatment-btn.acupuncture.active {
+            background: #ffeb3b;
+            color: #ac4b5c;
+        }
+        
+        .treatment-btn.cupping.active {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .treatment-btn.moxibustion.active {
+            background: #f44336;
+            color: white;
+        }
+        
+        .timer-row {
+            margin-bottom: 10px;
+            margin-top: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: clamp(12px, 2.5vw, 18px);
+        }
+        
+        .timer-adjust {
+            display: inline-flex;
+            flex-direction: column;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        
+        .adjust-up, .adjust-down {
+            background: none;
+            border: none;
+            color: #ac4b5c;
+            font-size: clamp(1.3rem, 3vw, 1.6rem);
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            transition: color 0.2s;
+        }
+        
+        .adjust-up:hover, .adjust-down:hover {
+            color: #5D3A6B;
+        }
+        
+        .needle-counter {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: clamp(8px, 1.5vw, 12px) clamp(10px, 2vw, 15px);
+            background: linear-gradient(135deg, #f4f3f1 0%, #e6bfc6 100%);
+            border: 3px solid #ac4b5c;
+            border-radius: 15px;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.3s ease;
+            min-width: clamp(80px, 15vw, 110px);
+            box-shadow: 0 4px 12px rgba(172, 75, 92, 0.2);
+        }
+        
+        .needle-counter:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 6px rgba(172, 75, 92, 0.3);
+        }
+        
+        .needle-label {
+            font-size: clamp(0.8rem, 1.8vw, 1rem);
+            color: #ac4b5c;
+            font-weight: 600;
+            margin-bottom: clamp(2px, 0.5vw, 4px);
+        }
+        
+        .needle-roller-container {
+            height: 100px;
+            overflow: hidden;
+            position: relative;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .needle-roller {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.15s ease-out;
+            position: absolute;
+            top: 50%;
+        }
+        
+        .needle-number {
+            font-weight: bold;
+            color: #ac4b5c;
+            line-height: 1;
+            transition: all 0.15s ease;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            opacity: 0;
+            flex-shrink: 0;
+        }
+        
+        .needle-number.center {
+            font-size: clamp(1.5rem, 4vw, 2.2rem);
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        .needle-number.side {
+            font-size: clamp(1rem, 2.5vw, 1.4rem);
+            opacity: 0.4;
+            color: #999;
+            transform: scale(0.8);
+        }
+        
+        .needle-number.far {
+            font-size: clamp(0.8rem, 1.8vw, 1.1rem);
+            opacity: 0.2;
+            color: #ccc;
+            transform: scale(0.6);
+        }
+        
+        .needle-hint {
+            font-size: clamp(0.9rem, 2vw, 1.2rem);
+            color: #d4a9b1;
+            opacity: 0.7;
+            line-height: 1;
+            margin-top: clamp(2px, 0.5vw, 4px);
+        }
+        
+        /* 침 갯수 저장 토스트 알림 */
+        .needle-save-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(76, 175, 80, 0.9);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+        
+        .needle-save-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .needle-save-toast.error {
+            background: rgba(244, 67, 54, 0.9);
+        }
+        
+        .controls {
+            margin-top: 10px;
+            margin-bottom: 0;
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .controls button {
+            font-size: clamp(1rem, 2.5vw, 1.3rem);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: #ac4b5c;
+            color: #f4f3f1;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        
+        .play-btn, .stop-btn {
+            padding: 8px 0px;
+            min-width: 50px;
+            width: 60px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        
+        .reset-btn {
+            padding: 8px 10px;
+            min-width: 80px;
+            font-size: clamp(1rem, 2.5vw, 1.3rem);
+        }
+        
+        .done-btn-small {
+            padding: 8px 10px;
+            min-width: 80px;
+            font-size: clamp(1rem, 2.5vw, 1.3rem);
+            background: #ff4081 !important;
+            color: #fff !important;
+            border: none;
+        }
+        
+        .controls button:disabled {
+            background: #e0e0e0;
+            color: #aaa;
+            cursor: not-allowed;
+        }
+        
+        .treatment-controls {
+            margin-top: 0;
+            margin-bottom: clamp(8px, 2vw, 12px);
+            display: flex;
+            justify-content: center;
+            gap: clamp(12px, 3vw, 20px);
+        }
+        
+        .treatment-btn {
+            width: 100%;
+            aspect-ratio: 1;
+            max-width: clamp(40px, 8vw, 60px);
+            border: 2px solid #ac4b5c;
+            border-radius: 50%;
+            background: #f4f3f1;
+            color: #ac4b5c;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: clamp(0.9rem, 2vw, 1.2rem);
+            font-weight: bold;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            align-self: center;
+        }
+        
+        .treatment-btn:hover {
+            background: #d4a9b1;
+            transform: translateY(-1px);
+        }
+        
+        .treatment-btn.active {
+            background: #ac4b5c;
+            color: white;
+        }
+        
+        .treatment-btn.acupuncture.active {
+            background: #ffeb3b;
+            color: #ac4b5c;
+        }
+        
+        .treatment-btn.cupping.active {
+            background: #4caf50;
+            color: white;
+        }
+        
+        .treatment-btn.moxibustion.active {
+            background: #f44336;
+            color: white;
+        }
+        
+        .timer-btn:hover {
+            background: #ac4b5c;
+            color: white;
+        }
+        
+        .heating-button:active {
+            transform: translateY(0);
+        }
+        
+        /* 세로 모드 (높이가 넓이보다 클 때) */
+        @media (orientation: portrait) {
+            .main-content {
+                flex-direction: column;
+                gap: clamp(10px, 2vw, 20px);
+            }
+            
+            .timeline { gap: clamp(6px, 2vw, 12px); }
+        }
+        
+        /* 매우 작은 화면 */
+        @media (max-width: 480px) {
+            .container {
+                padding: clamp(8px, 2vw, 15px);
+            }
+            
+            .alert-message {
+                font-size: clamp(1.2rem, 5vw, 2.5rem);
+                padding: clamp(15px, 4vw, 30px);
+            }
+        }
+        
+        /* 세로 모드에서 높이가 제한적일 때 */
+        @media (orientation: portrait) and (max-height: 600px) {
+            .container {
+                padding: clamp(5px, 1vw, 15px);
+            }
+            
+            .patient-info, .timer-section, .treatment-progress {
+                margin-bottom: clamp(5px, 1vw, 15px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="room-name" id="roomName">
+            Loading...
+        </div>
+        
+        <div class="main-content">
+            <div class="top-row">
+                <div class="patient-info">
+                    <div class="patient-info-title">입실 현황</div>
+                    <div class="patient-table">
+                        <div class="patient-cell">
+                            <div class="patient-label">이름</div>
+                            <div class="patient-value empty" id="patientName">환자 없음</div>
+                        </div>
+                        <div class="patient-cell">
+                            <div class="patient-label">주치의</div>
+                            <div class="patient-value empty" id="doctorName">-</div>
+                        </div>
+                        <div class="patient-cell">
+                            <div class="patient-label">상담사</div>
+                            <div class="patient-value empty" id="counselorName">-</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="heating-control">
+                    <div class="heating-label">온열 장판 (현재 상태)</div>
+                    
+                    <!-- 온열 제어만 -->
+                    <div class="heating-main">
+                        <button class="heating-toggle-btn off" id="heatingToggleBtn">OFF</button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bottom-row">
+                <div class="timer-section">
+                    <!-- 왼쪽: 치료 버튼들과 침 갯수 가로 배치 -->
+                    <div class="treatment-controls-container">
+                        <div class="treatment-controls-vertical">
+                            <button class="treatment-btn acupuncture" id="acupunctureBtn">C</button>
+                            <button class="treatment-btn cupping" id="cuppingBtn">B</button>
+                            <button class="treatment-btn moxibustion" id="moxibustionBtn">D</button>
+                        </div>
+                        <div class="needle-counter" id="needleCounter">
+                            <div class="needle-label">침</div>
+                            <div class="needle-roller-container">
+                                <div class="needle-roller" id="needleRoller">
+                                    <!-- 숫자들이 동적으로 추가됩니다 -->
+                                </div>
+                            </div>
+                            <div class="needle-hint">↕</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 오른쪽: 타이머와 컨트롤 -->
+                    <div class="timer-main-area">
+                        <div class="treatment-label empty" id="treatmentLabel">
+                            대기 중
+                        </div>
+                        <div class="timer-row">
+                            <span class="timer-display" id="timerDisplay">00:00</span>
+                            <span class="timer-adjust">
+                                <button class="adjust-up" id="increaseTimer">▲</button>
+                                <button class="adjust-down" id="decreaseTimer">▼</button>
+                            </span>
+                        </div>
+                        
+                        <div class="controls">
+                            <button id="startBtn" class="play-btn timer-btn">▶</button>
+                            <button id="stopBtn" class="stop-btn timer-btn" style="display:none;">⏸</button>
+                            <button id="resetBtn" class="reset-btn">Reset</button>
+                            <button id="doneBtn" class="done-btn-small">발침</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="treatment-progress" id="treatmentProgress" style="display: block;">
+                    <div class="progress-title">치료 진행 상황</div>
+                    <div class="timeline" id="treatmentTimeline">
+                        <div class="timeline-row" id="timelineRow"></div>
+                        <div class="timeline-labels" id="timelineLabels"></div>
+                    </div>
+                    <div class="optional-treatments" id="optionalTreatments"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer" id="footer">
+            마지막 업데이트: --:--
+        </div>
+    </div>
+    
+    
+    <!-- 치료 완료 버튼 (클릭 가능) -->
+    <div class="treatment-complete-btn" id="treatmentCompleteBtn">
+        <div class="complete-content">
+            <h2>치료 완료!</h2>
+            <p>발침을 완료해주세요</p>
+        </div>
+    </div>
+    
+    <!-- 침 갯수 저장 알림 토스트 -->
+    <div class="needle-save-toast" id="needleSaveToast">
+        침 갯수 저장 완료
+    </div>
+    
+    <audio id="alarmSound" src="beep.mp3" loop></audio>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // URL에서 방 이름 추출 및 디코딩
+        const pathParts = window.location.pathname.split('/');
+        const encodedRoomName = pathParts[pathParts.length - 1];
+        const roomName = decodeURIComponent(encodedRoomName);
+        
+        // 페이지 제목 설정 함수
+        const titleSuffix = (roomName.startsWith('처음1') || roomName.startsWith('처음2')) ? '번방 현황' : '방 현황';
+        
+        function updatePageTitle(patientName = '') {
+            if (patientName && patientName.trim() && patientName !== '환자 없음') {
+                document.title = `${roomName}${titleSuffix}(${patientName.trim()})`;
+            } else {
+                document.title = `${roomName}${titleSuffix}`;
+            }
+        }
+        
+        // 초기 제목 설정
+        updatePageTitle();
+        
+        console.log('🏠 현재 방:', roomName);
+        
+        // DOM 요소
+        const roomNameEl = document.getElementById('roomName');
+        const patientNameEl = document.getElementById('patientName');
+        const doctorNameEl = document.getElementById('doctorName');
+        const counselorNameEl = document.getElementById('counselorName');
+        const treatmentLabelEl = document.getElementById('treatmentLabel');
+        const timerDisplayEl = document.getElementById('timerDisplay');
+        const footerEl = document.getElementById('footer');
+        const alarmSound = document.getElementById('alarmSound');
+        const treatmentProgressEl = document.getElementById('treatmentProgress');
+        const treatmentTimelineEl = document.getElementById('treatmentTimeline');
+        const timelineRowEl = document.getElementById('timelineRow');
+        const timelineLabelsEl = document.getElementById('timelineLabels');
+        const optionalTreatmentsEl = document.getElementById('optionalTreatments');
+        const heatingButtonEl = document.getElementById('heatingButton');
+        const treatmentCompleteBtn = document.getElementById('treatmentCompleteBtn');
+        const needleCounter = document.getElementById('needleCounter');
+        const needleRoller = document.getElementById('needleRoller');
+        const needleSaveToast = document.getElementById('needleSaveToast');
+        
+        // 방 이름 표시
+        const displaySuffix = (roomName.startsWith('처음1') || roomName.startsWith('처음2')) ? '번방' : '방';
+        roomNameEl.textContent = roomName + displaySuffix;
+        
+        // 침 갯수 롤러 초기화
+        let needleCount = 10; // 기본값
+        const ITEM_HEIGHT = 35; // 픽셀 단위 고정값
+        let needleSaveTimeout = null; // 저장 디바운스용
+        
+        // 롤러에 숫자들 생성 (0~99)
+        function createRollerNumbers() {
+            if (!needleRoller) {
+                console.error('needleRoller 요소를 찾을 수 없습니다');
+                return;
+            }
+            
+            needleRoller.innerHTML = '';
+            for (let i = 0; i <= 99; i++) {
+                const numberDiv = document.createElement('div');
+                numberDiv.className = 'needle-number';
+                numberDiv.textContent = i;
+                numberDiv.dataset.value = i;
+                needleRoller.appendChild(numberDiv);
+            }
+            
+            console.log('롤러 생성 완료, 숫자 개수:', needleRoller.children.length);
+            
+            // 초기 위치 설정
+            updateRollerPosition(needleCount);
+        }
+        
+        // 토스트 알림 표시
+        function showToast(message, isError = false) {
+            needleSaveToast.textContent = message;
+            needleSaveToast.classList.remove('error');
+            if (isError) {
+                needleSaveToast.classList.add('error');
+            }
+            needleSaveToast.classList.add('show');
+            
+            // 2초 후 자동으로 숨김
+            setTimeout(() => {
+                needleSaveToast.classList.remove('show');
+            }, 2000);
+        }
+        
+        // 침 갯수를 서버에 저장 (디바운스)
+        function saveNeedleCount(count) {
+            console.log('🔄 침 갯수 저장 준비 중...', count);
+            
+            // 이전 타이머 취소
+            if (needleSaveTimeout) {
+                clearTimeout(needleSaveTimeout);
+            }
+            
+            // 1초 후에 저장
+            needleSaveTimeout = setTimeout(() => {
+                console.log('💉 침 갯수 서버로 전송 시도:', count, 'room:', roomName);
+                
+                if (!socket || !socket.connected) {
+                    console.error('❌ Socket.IO 연결되지 않음!');
+                    showToast('연결 실패', true);
+                    return;
+                }
+                
+                socket.emit('updateNeedleCount', { room: roomName, needleCount: count });
+                console.log('📤 침 갯수 이벤트 전송 완료');
+            }, 1000);
+        }
+        
+        // 롤러 위치 및 스타일 업데이트
+        function updateRollerPosition(count, shouldSave = false) {
+            if (!needleRoller) return;
+            
+            // top: 50%에서 시작하므로, 현재 숫자의 절반만큼 위로 올리면 중앙에 위치
+            const offset = -count * ITEM_HEIGHT - ITEM_HEIGHT / 2;
+            needleRoller.style.transform = `translateY(${offset}px)`;
+            
+            console.log('현재 숫자:', count, '오프셋:', offset);
+            
+            // 각 숫자의 스타일 업데이트
+            const numbers = needleRoller.querySelectorAll('.needle-number');
+            numbers.forEach((num, index) => {
+                const distance = Math.abs(index - count);
+                
+                // 모든 클래스 제거
+                num.classList.remove('center', 'side', 'far');
+                
+                if (distance === 0) {
+                    num.classList.add('center');
+                } else if (distance === 1) {
+                    num.classList.add('side');
+                } else if (distance === 2) {
+                    num.classList.add('far');
+                }
+            });
+            
+            // 서버에 저장
+            if (shouldSave) {
+                saveNeedleCount(count);
+            }
+        }
+        
+        // Socket.IO 연결 먼저
+        const socket = io();
+        
+        // 롤러는 소켓 연결 후 데이터 받아온 다음에 생성
+        let rollerInitialized = false;
+        
+        // 침 갯수 스와이프 기능
+        let touchStartY = 0;
+        let lastTouchY = 0;
+        let isSwiping = false;
+        let lastCount = 10;
+        
+        needleCounter.addEventListener('touchstart', (e) => {
+            touchStartY = e.touches[0].clientY;
+            lastTouchY = e.touches[0].clientY;
+            lastCount = needleCount;
+            isSwiping = true;
+        }, { passive: false });
+        
+        needleCounter.addEventListener('touchmove', (e) => {
+            if (!isSwiping) return;
+            
+            // 스크롤 방지
+            e.preventDefault();
+            
+            const currentY = e.touches[0].clientY;
+            const totalDistance = touchStartY - currentY; // 위로 올리면 양수, 아래로 내리면 음수
+            
+            // 15픽셀당 1개씩 증감 (더 민감하게)
+            const step = 15;
+            const change = Math.floor(totalDistance / step);
+            
+            // 쓸어올리면(위로) 증가, 쓸어내리면(아래로) 감소
+            const newCount = lastCount + change;
+            
+            // 범위 제한
+            needleCount = Math.max(0, Math.min(99, newCount));
+            
+            // 롤러 위치 업데이트 (서버 저장 O)
+            updateRollerPosition(needleCount, true);
+            
+            lastTouchY = currentY;
+        }, { passive: false });
+        
+        needleCounter.addEventListener('touchend', () => {
+            isSwiping = false;
+        });
+        
+        // 마우스 드래그도 지원 (데스크탑 테스트용)
+        let isMouseDown = false;
+        let mouseStartY = 0;
+        let mouseLastCount = 10;
+        
+        needleCounter.addEventListener('mousedown', (e) => {
+            isMouseDown = true;
+            mouseStartY = e.clientY;
+            mouseLastCount = needleCount;
+            e.preventDefault();
+        });
+        
+        document.addEventListener('mousemove', (e) => {
+            if (!isMouseDown) return;
+            
+            const currentY = e.clientY;
+            const totalDistance = mouseStartY - currentY;
+            
+            const step = 15;
+            const change = Math.floor(totalDistance / step);
+            
+            const newCount = mouseLastCount + change;
+            needleCount = Math.max(0, Math.min(99, newCount));
+            
+            // 롤러 위치 업데이트 (서버 저장 O)
+            updateRollerPosition(needleCount, true);
+        });
+        
+        document.addEventListener('mouseup', () => {
+            isMouseDown = false;
+        });
+        
+        // 시간 포맷 함수
+        function formatTime(seconds) {
+            const min = Math.floor(seconds / 60);
+            const sec = seconds % 60;
+            return `${String(min).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+        }
+        
+        // 현재 시간 업데이트
+        function updateFooter() {
+            const now = new Date();
+            const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+            footerEl.textContent = `마지막 업데이트: ${timeStr}`;
+        }
+        
+        // 치료 진행 상황 가져오기
+        async function fetchTreatmentStatus() {
+            try {
+                const response = await fetch(`/api/room/${encodeURIComponent(roomName)}/treatment-status`);
+                const data = await response.json();
+                
+                // 치료 진행 상황 블록은 항상 표시
+                treatmentProgressEl.style.display = 'block';
+                
+                if (data.hasPatient) {
+                    // 환자명, 주치의, 상담사 정보 업데이트
+                    const patientName = data.patientName || '';
+                    const doctorName = data.doctorName || '';
+                    const counselorName = (data.counselorName && data.counselorName.trim()) ? data.counselorName.trim() : '-';
+                    
+                    updateTreatmentProgress(data.treatmentStatus, counselorName);
+                    
+                    patientNameEl.textContent = patientName || '환자 없음';
+                    doctorNameEl.textContent = doctorName || '-';
+                    counselorNameEl.textContent = counselorName;
+                    
+                    patientNameEl.classList.remove('empty');
+                    doctorNameEl.classList.remove('empty');
+                    counselorNameEl.classList.remove('empty');
+                    
+                    // 침 갯수 업데이트 (서버에서 받은 값)
+                    if (data.needleCount !== undefined && data.needleCount !== null) {
+                        needleCount = data.needleCount;
+                        console.log('💉 서버에서 받은 침 갯수:', needleCount);
+                    }
+                    
+                    // 롤러 초기화 (처음 한 번만)
+                    if (!rollerInitialized) {
+                        createRollerNumbers();
+                        rollerInitialized = true;
+                    } else if (needleRoller && needleRoller.children.length > 0) {
+                        // 이미 초기화되어 있으면 위치만 업데이트
+                        updateRollerPosition(needleCount, false);
+                    }
+                    
+                    // 브라우저 탭 제목 업데이트
+                    updatePageTitle(patientName);
+                } else {
+                    // 환자가 없을 때는 빈 상태로 표시
+                    updateTreatmentProgress({});
+                    
+                    patientNameEl.textContent = '환자 없음';
+                    doctorNameEl.textContent = '-';
+                    counselorNameEl.textContent = '-';
+                    patientNameEl.classList.add('empty');
+                    doctorNameEl.classList.add('empty');
+                    counselorNameEl.classList.add('empty');
+                    
+                    // 침 갯수 10으로 초기화
+                    needleCount = 10;
+                    
+                    // 롤러 초기화 (처음 한 번만)
+                    if (!rollerInitialized) {
+                        createRollerNumbers();
+                        rollerInitialized = true;
+                    } else if (needleRoller && needleRoller.children.length > 0) {
+                        updateRollerPosition(needleCount, false);
+                    }
+                    
+                    // 브라우저 탭 제목 업데이트
+                    updatePageTitle();
+                }
+                
+                updateFooter();
+            } catch (error) {
+                console.error('❌ 치료 진행 상황 조회 실패:', error);
+            }
+        }
+        
+        // 치료 진행 상황 표시 업데이트 (타임라인)
+        function updateTreatmentProgress(treatmentStatus, counselorName = '') {
+            // 메인 타임라인: 심리상담(옵션), 원장진료, 침
+            const mainSteps = [
+                { key: '원상', label: '원장진료' },
+                { key: '침', label: '침' }
+            ];
+            
+            // 심리상담이 있고, 상담사가 원장님만이 아닌 경우에만 심상 단계 추가
+            if (treatmentStatus.심상 !== undefined && counselorName && counselorName !== '-' && counselorName !== '원장님만') {
+                mainSteps.unshift({ key: '심상', label: '심리상담' });
+            }
+
+            // 선택 치료: 부항, 뜸
+            const optionalSteps = [
+                { key: '부항', label: '부항' },
+                { key: '뜸', label: '뜸' }
+            ];
+
+            // 메인 타임라인 렌더링 (정렬 규칙: 완료 → 진행중 → 대기)
+            const stateRank = s => (s.completed ? 0 : (s.inProgress ? 1 : 2));
+            const sortedMain = [...mainSteps].sort((a, b) => stateRank(treatmentStatus[a.key]) - stateRank(treatmentStatus[b.key]));
+
+            timelineRowEl.innerHTML = '';
+            timelineLabelsEl.innerHTML = '';
+            sortedMain.forEach((step, idx) => {
+                const status = treatmentStatus[step.key] || { completed: false, inProgress: false };
+
+                // dot + following connector in a single flex row so they touch
+                const stepWrap = document.createElement('div');
+                stepWrap.className = 'step-wrap' + (idx === sortedMain.length - 1 ? ' last' : '');
+                
+                const dotWrap = document.createElement('div');
+                dotWrap.style.display = 'flex';
+                dotWrap.style.alignItems = 'center';
+                const dot = document.createElement('div');
+                dot.className = 'timeline-dot';
+                if (status.completed) {
+                    dot.classList.add('completed');
+                    dot.classList.add(step.key);
+                } else if (status.inProgress) {
+                    dot.classList.add('in-progress');
+                    dot.classList.add(step.key);
+                }
+                dotWrap.appendChild(dot);
+                stepWrap.appendChild(dotWrap);
+
+                // label
+                const labelWrap = document.createElement('div');
+                labelWrap.className = 'segment';
+                const label = document.createElement('div');
+                label.className = 'timeline-label ' + (status.completed ? 'completed' : (status.inProgress ? 'in-progress' : 'pending'));
+                if (status.completed || status.inProgress) {
+                    label.classList.add(step.key);
+                }
+                label.textContent = step.label;
+                labelWrap.appendChild(label);
+                timelineLabelsEl.appendChild(labelWrap);
+
+                // connector except last item
+                if (idx < sortedMain.length - 1) {
+                    const connector = document.createElement('div');
+                    // 다음 단계의 상태 확인
+                    const nextStep = sortedMain[idx + 1];
+                    const nextStatus = treatmentStatus[nextStep.key] || { completed: false, inProgress: false };
+                    // 현재 단계가 완료되고, 다음 단계도 완료 또는 진행중일 때만 실선
+                    const isSolid = status.completed && (nextStatus.completed || nextStatus.inProgress);
+                    connector.className = 'timeline-line ' + (isSolid ? 'solid' : 'dotted');
+                    stepWrap.appendChild(connector);
+                }
+                timelineRowEl.appendChild(stepWrap);
+            });
+            
+            // 선택 치료 렌더링 (부항, 뜸)
+            optionalTreatmentsEl.innerHTML = '';
+            optionalSteps.forEach(step => {
+                const status = treatmentStatus[step.key] || { completed: false, inProgress: false };
+                
+                const optionalStep = document.createElement('div');
+                optionalStep.className = 'optional-step';
+                
+                // Dot
+                const dot = document.createElement('div');
+                dot.className = 'timeline-dot';
+                if (status.completed) {
+                    dot.classList.add('completed');
+                    dot.classList.add(step.key);
+                } else if (status.inProgress) {
+                    dot.classList.add('in-progress');
+                    dot.classList.add(step.key);
+                }
+                
+                // Label
+                const label = document.createElement('div');
+                label.className = 'timeline-label ' + (status.completed ? 'completed' : (status.inProgress ? 'in-progress' : 'pending'));
+                if (status.completed || status.inProgress) {
+                    label.classList.add(step.key);
+                }
+                label.textContent = step.label;
+                
+                optionalStep.appendChild(dot);
+                optionalStep.appendChild(label);
+                optionalTreatmentsEl.appendChild(optionalStep);
+            });
+        }
+        
+        // 초기 연결 시
+        socket.on('connect', () => {
+            console.log('✅ Socket.IO 연결 성공');
+            updateFooter();
+            // 초기 치료 진행 상황 조회
+            fetchTreatmentStatus();
+        });
+        
+        // 타이머 상태 업데이트
+        socket.on('timerState', ({ room, state }) => {
+            // 다른 방의 이벤트는 무시
+            if (room !== roomName) return;
+            
+            console.log(`📊 타이머 상태 업데이트:`, state);
+            updateFooter();
+            
+            // 치료 라벨 표시
+            if (state.label && state.label.trim()) {
+                treatmentLabelEl.textContent = state.label.trim();
+                treatmentLabelEl.classList.remove('empty');
+                
+                // 라벨별 색상 변경
+                if (state.label === '침') {
+                    treatmentLabelEl.style.color = '#f57c00';
+                } else if (state.label === '부항') {
+                    treatmentLabelEl.style.color = '#388e3c';
+                } else if (state.label === '뜸') {
+                    treatmentLabelEl.style.color = '#d32f2f';
+                } else if (state.label === '진료중') {
+                    treatmentLabelEl.style.color = '#5D3A6B';
+                } else if (state.label === '상담중') {
+                    treatmentLabelEl.style.color = '#7b1fa2';
+                } else if (state.label === '대기중') {
+                    treatmentLabelEl.style.color = '#ff8c00';
+                } else if (state.label === '검사중') {
+                    treatmentLabelEl.style.color = '#0288d1';
+                } else if (state.label === '안내중') {
+                    treatmentLabelEl.style.color = '#0277bd';
+                } else {
+                    treatmentLabelEl.style.color = '#1565c0';
+                }
+            } else {
+                treatmentLabelEl.textContent = '대기 중';
+                treatmentLabelEl.classList.add('empty');
+                treatmentLabelEl.style.color = '#90a4ae';
+            }
+            
+            // 타이머 표시
+            timerDisplayEl.textContent = formatTime(state.timeLeft);
+            
+            // 카운트업 모드 표시
+            if (state.isCountUp) {
+                timerDisplayEl.classList.add('countup');
+            } else {
+                timerDisplayEl.classList.remove('countup');
+            }
+            
+            
+            // 버튼 상태 업데이트 (index.html과 동일)
+            if (resetBtn) resetBtn.disabled = false;
+            if (state.isRunning) {
+                if (startBtn) startBtn.style.display = 'none';
+                if (stopBtn) stopBtn.style.display = '';
+            } else {
+                if (startBtn) startBtn.style.display = '';
+                if (stopBtn) stopBtn.style.display = 'none';
+            }
+            
+            // 타이머 종료 알림 해제
+            if (!state.wasRunning || state.timeLeft > 0 || state.isCountUp) {
+                alarmSound.pause();
+                alarmSound.currentTime = 0;
+            }
+        });
+        
+        // 타이머 종료 이벤트
+        socket.on('timerEnded', ({ room }) => {
+            if (room !== roomName) return;
+            
+            console.log('🔔 타이머 종료!');
+            updateFooter();
+            
+            // 치료완료 버튼 표시
+            treatmentCompleteBtn.style.display = 'block';
+            
+            // 알림음 재생
+            alarmSound.play().catch(e => console.log('알림음 재생 실패:', e));
+        });
+        
+        // 발침완료 이벤트
+        socket.on('doneAlarm', ({ room, label }) => {
+            if (room !== roomName) return;
+            
+            console.log('✅ 발침 완료');
+            updateFooter();
+            
+            // 알림음 해제
+            alarmSound.pause();
+            alarmSound.currentTime = 0;
+            
+            // 치료완료 버튼 숨김
+            treatmentCompleteBtn.style.display = 'none';
+        });
+        
+        // 환자 이름 업데이트
+        socket.on('nameUpdate', ({ room, name }) => {
+            if (room !== roomName) return;
+            
+            console.log(`👤 환자 이름 업데이트: ${name}`);
+            updateFooter();
+            
+            if (name && name.trim()) {
+                patientNameEl.textContent = name.trim();
+                patientNameEl.classList.remove('empty');
+                // 브라우저 탭 제목 업데이트
+                updatePageTitle(name.trim());
+                // 환자가 있으면 치료 진행 상황 조회
+                fetchTreatmentStatus();
+            } else {
+                patientNameEl.textContent = '환자 없음';
+                doctorNameEl.textContent = '-';
+                counselorNameEl.textContent = '-';
+                patientNameEl.classList.add('empty');
+                doctorNameEl.classList.add('empty');
+                counselorNameEl.classList.add('empty');
+                // 브라우저 탭 제목 업데이트
+                updatePageTitle();
+                // 치료 진행 상황 블록은 항상 표시 (빈 상태)
+                treatmentProgressEl.style.display = 'block';
+                updateTreatmentProgress({});
+            }
+        });
+        
+        // 이름 새로고침 이벤트
+        socket.on('namesRefreshed', (data) => {
+            console.log('🔄 이름 새로고침:', data);
+            updateFooter();
+            
+            const names = data.names || data;
+            const name = names[roomName];
+            
+            if (name && name.trim()) {
+                patientNameEl.textContent = name.trim();
+                patientNameEl.classList.remove('empty');
+                // 브라우저 탭 제목 업데이트
+                updatePageTitle(name.trim());
+                // 환자가 있으면 치료 진행 상황 조회
+                fetchTreatmentStatus();
+            } else {
+                patientNameEl.textContent = '환자 없음';
+                doctorNameEl.textContent = '-';
+                counselorNameEl.textContent = '-';
+                patientNameEl.classList.add('empty');
+                doctorNameEl.classList.add('empty');
+                counselorNameEl.classList.add('empty');
+                // 브라우저 탭 제목 업데이트
+                updatePageTitle();
+                // 치료 진행 상황 블록은 항상 표시 (빈 상태)
+                treatmentProgressEl.style.display = 'block';
+                updateTreatmentProgress({});
+            }
+        });
+        
+        // 침 갯수 저장 응답
+        socket.on('needleCountSaved', ({ room, needleCount, success }) => {
+            if (room !== roomName) return;
+            
+            if (success) {
+                console.log('✅ 침 갯수 저장 완료:', needleCount);
+                showToast(`침 ${needleCount}개 저장완료`);
+            } else {
+                console.error('❌ 침 갯수 저장 실패:', needleCount);
+                showToast('저장 실패', true);
+            }
+        });
+        
+        // 연결 해제 시
+        socket.on('disconnect', () => {
+            console.log('❌ Socket.IO 연결 해제');
+            statusIndicatorEl.classList.add('inactive');
+        });
+        
+        // 매초 푸터 업데이트
+        setInterval(updateFooter, 1000);
+        
+        // 화면 터치하면 알림 해제 (blinkAlertEl 제거됨)
+        // blinkAlertEl.addEventListener('click', () => {
+        //     blinkAlertEl.classList.remove('active');
+        //     alarmSound.pause();
+        //     alarmSound.currentTime = 0;
+        // });
+        
+        // DOM 요소들 (맨 위로 이동)
+        const heatingToggleBtn = document.getElementById('heatingToggleBtn');
+        const acupunctureBtn = document.getElementById('acupunctureBtn');
+        const cuppingBtn = document.getElementById('cuppingBtn');
+        const moxibustionBtn = document.getElementById('moxibustionBtn');
+        const increaseTimerBtn = document.getElementById('increaseTimer');
+        const decreaseTimerBtn = document.getElementById('decreaseTimer');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const doneBtn = document.getElementById('doneBtn');
+        
+        // 치료 제어 기능
+        let isHeatingOn = false;
+        
+        // 온열 토글 버튼
+        heatingToggleBtn.addEventListener('click', () => {
+            isHeatingOn = !isHeatingOn;
+            
+            if (isHeatingOn) {
+                heatingToggleBtn.textContent = 'ON';
+                heatingToggleBtn.classList.remove('off');
+                heatingToggleBtn.classList.add('on');
+            } else {
+                heatingToggleBtn.textContent = 'OFF';
+                heatingToggleBtn.classList.remove('on');
+                heatingToggleBtn.classList.add('off');
+            }
+            
+            console.log('🔥 온열 상태:', isHeatingOn ? 'ON' : 'OFF');
+        });
+        
+        // 타이머 시간 조정 기능 (index.html과 동일하게 Socket.IO 사용)
+        increaseTimerBtn.addEventListener('click', () => {
+            socket.emit('adjustTimer', { room: roomName, diff: 60 }); // 1분 증가
+        });
+        
+        decreaseTimerBtn.addEventListener('click', () => {
+            socket.emit('adjustTimer', { room: roomName, diff: -60 }); // 1분 감소
+        });
+        
+        // 타이머 제어 버튼들 (index.html과 동일)
+        startBtn.addEventListener('click', () => {
+            // 현재 표시된 시간 읽기
+            const timerText = timerDisplay.textContent;
+            const [min, sec] = timerText.split(':').map(Number);
+            const duration = min * 60 + sec;
+            
+            // 0초면 15분(900초)로, 아니면 현재 값으로 시작
+            socket.emit('startTimer', { room: roomName, duration: duration > 0 ? duration : 900, force: true });
+        });
+        
+        stopBtn.addEventListener('click', () => {
+            socket.emit('stopTimer', { room: roomName });
+        });
+        
+        resetBtn.addEventListener('click', () => {
+            socket.emit('resetTimer', { room: roomName });
+        });
+        
+        doneBtn.addEventListener('click', () => {
+            socket.emit('doneAlarm', { room: roomName });
+        });
+        
+        // 치료 완료 버튼 클릭 이벤트 (발침완료와 동일한 역할)
+        treatmentCompleteBtn.addEventListener('click', () => {
+            socket.emit('doneAlarm', { room: roomName });
+            // 버튼 숨기기
+            treatmentCompleteBtn.style.display = 'none';
+        });
+        
+        // 치료 버튼 클릭 이벤트
+        console.log('🔧 치료 버튼 이벤트 리스너 등록 중...');
+        console.log('침 버튼:', acupunctureBtn);
+        console.log('부항 버튼:', cuppingBtn);
+        console.log('뜸 버튼:', moxibustionBtn);
+        
+        if (acupunctureBtn) {
+            acupunctureBtn.addEventListener('click', () => {
+                console.log('침 버튼 클릭됨');
+                startTreatment('침', acupunctureBtn);
+            });
+        } else {
+            console.error('침 버튼을 찾을 수 없음');
+        }
+        
+        if (cuppingBtn) {
+            cuppingBtn.addEventListener('click', () => {
+                console.log('부항 버튼 클릭됨');
+                startTreatment('부항', cuppingBtn);
+            });
+        } else {
+            console.error('부항 버튼을 찾을 수 없음');
+        }
+        
+        if (moxibustionBtn) {
+            moxibustionBtn.addEventListener('click', () => {
+                console.log('뜸 버튼 클릭됨');
+                startTreatment('뜸', moxibustionBtn);
+            });
+        } else {
+            console.error('뜸 버튼을 찾을 수 없음');
+        }
+        
+        function startTreatment(treatment, button) {
+            // 다른 버튼들 비활성화
+            [acupunctureBtn, cuppingBtn, moxibustionBtn].forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 현재 버튼 활성화
+            button.classList.add('active');
+            
+            // 기본 시간 설정 (침: 15분, 부항: 15분, 뜸: 15분)
+            const defaultDuration = 15 * 60; // 15분 = 900초
+            
+            // Socket.IO로 서버에 타이머 시작 알림
+            socket.emit('startTimer', {
+                room: roomName,
+                duration: defaultDuration,
+                force: true,
+                label: treatment
+            });
+        }
+    </script>
+</body>
+</html>
+
+

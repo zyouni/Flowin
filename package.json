@@ -1,0 +1,25 @@
+{
+  "name": "web-timer",
+  "version": "1.0.0",
+  "description": "실시간 동기화 웹 타이머",
+  "main": "server_test.js",
+  "scripts": {
+    "start": "node server_test.js",
+    "dev": "nodemon server_test.js"
+  },
+  "dependencies": {
+    "airtable": "^0.12.2",
+    "axios": "^1.9.0",
+    "dotenv": "^16.5.0",
+    "express": "^4.21.2",
+    "node-fetch": "^3.3.2",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

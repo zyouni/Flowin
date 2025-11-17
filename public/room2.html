@@ -1,0 +1,1568 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <title>방 현황</title>
+    <style>
+        :root {
+            --bg-primary: #5a1f1e;
+            --panel-bg: #f7f3f2;
+            --accent: #b45562;
+            --accent-soft: #e7c6cc;
+            --text-dark: #3d1c25;
+            --text-muted: #7b6b72;
+            --success: #2e7d32;
+            --warning: #ff9800;
+            --danger: #d32f2f;
+            --pulse: rgba(180, 85, 98, 0.25);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+        }
+
+        html {
+            font-size: 14px;
+        }
+
+        body {
+            background: radial-gradient(circle at top, #7c2d2b, var(--bg-primary));
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+            padding: clamp(10px, 1vw, 24px);
+            color: var(--text-dark);
+        }
+
+        .layout {
+            display: grid;
+            grid-template-rows: auto auto 1fr auto;
+            gap: 14px;
+            width: 100%;
+            max-width: 400px;
+            min-height: 600px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 12px;
+            box-shadow: 0 24px 50px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(12px);
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #fceced;
+        }
+
+        .room-heading {
+            font-size: clamp(1.5rem, 3.2vw, 2.4rem);
+            font-weight: 700;
+            text-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+        }
+
+        .updated-at {
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            opacity: 0.8;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .card {
+            background: var(--panel-bg);
+            border-radius: clamp(14px, 2vw, 20px);
+            padding: clamp(10px, 2vw, 16px);
+            display: flex;
+            flex-direction: column;
+            gap: clamp(5px, 1vw, 8px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-label {
+            font-size: clamp(0.9rem, 2vw, 1.1rem);
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .patient-name {
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .doctor-info,
+        .counselor-info {
+            font-size: clamp(0.95rem, 2vw, 1.2rem);
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        .status-panel {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+
+        .timer-card {
+            background: rgba(255, 255, 255, 0.18);
+            border-radius: 24px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 20px 30px rgba(0, 0, 0, 0.18);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .timer-card .status-label {
+            position: absolute;
+            top: 16px;
+            left: 18px;
+            transform: none;
+        }
+
+        .status-label {
+            font-size: clamp(0.95rem, 2vw, 1.3rem);
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 10px;
+            letter-spacing: 0.08em;
+            padding: 6px 16px;
+            border-radius: 999px;
+            text-align: center;
+            background: #ffbcd4;
+        }
+
+        .status-label.idle {
+            background: #f5c6d9;
+        }
+
+        .status-label.treatment {
+            background: #ffb84d; /* 노란색 계열 */
+        }
+
+        .status-label.progress {
+            background: #7edaa5; /* 초록색 계열 */
+        }
+
+        .status-label.label-chim,
+        .status-label.label-buhang,
+        .status-label.label-ddeum,
+        .status-label.label-jinryo,
+        .status-label.label-sangdam,
+        .status-label.label-gumsa,
+        .status-label.label-annae {
+            color: #ffffff;
+        }
+
+        .status-label.label-chim {
+            background: #ffc107;
+        }
+
+        .status-label.label-buhang {
+            background: #81c784;
+        }
+
+        .status-label.label-ddeum {
+            background: #f48fb1;
+        }
+
+        .status-label.label-jinryo {
+            background: #b39ddb;
+        }
+
+        .status-label.label-sangdam {
+            background: #f48fb1;
+        }
+
+        .status-label.label-gumsa {
+            background: #90caf9;
+        }
+
+        .status-label.label-annae {
+            background: #81d4fa;
+        }
+
+        .timer-display {
+            font-size: clamp(2.2rem, 6vw, 3.6rem);
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: 0.14em;
+        }
+
+        .timer-display.countup {
+            color: #dcd7d7;
+        }
+
+        .timer-main {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .timer-adjust-column {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .timer-adjust-column button {
+            background: transparent;
+            color: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50%;
+            padding: 6px;
+            font-size: 1.1rem;
+            box-shadow: none;
+            cursor: pointer;
+            transition: transform 0.18s ease, color 0.18s ease;
+        }
+
+        .timer-adjust-column button:hover {
+            transform: translateY(-2px);
+            color: #ffffff;
+        }
+
+        .timer-adjust-column button:active {
+            transform: translateY(0);
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .quick-status {
+            background: var(--panel-bg);
+            border-radius: clamp(20px, 3vw, 26px);
+            padding: clamp(18px, 3vw, 24px);
+            box-shadow: 0 18px 30px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: clamp(12px, 2vw, 18px);
+        }
+
+        .quick-status-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .quick-status h3 {
+            font-size: clamp(1.1rem, 3vw, 1.6rem);
+            color: var(--accent);
+            margin: 0;
+        }
+
+        .status-toggle {
+            background: rgba(247, 94, 128, 0.15);
+            color: var(--accent);
+            border: none;
+            border-radius: 999px;
+            padding: 4px 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease, color 0.2s ease;
+            display: none;
+        }
+
+        .status-toggle.visible {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status-toggle[aria-expanded='true'] {
+            background: rgba(247, 94, 128, 0.25);
+        }
+
+        .quick-status .status-list {
+            transition: max-height 0.2s ease;
+        }
+
+        .status-list {
+            display: grid;
+            gap: clamp(10px, 1.5vw, 14px);
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: clamp(10px, 1.5vw, 14px) clamp(12px, 1.8vw, 16px);
+            border-radius: clamp(12px, 1.5vw, 16px);
+            background: rgba(180, 85, 98, 0.08);
+            font-size: clamp(1rem, 2.4vw, 1.3rem);
+            font-weight: 600;
+        }
+
+        .status-item .badge {
+            padding: clamp(4px, 1vw, 6px) clamp(10px, 1.6vw, 14px);
+            border-radius: 999px;
+            font-size: clamp(0.85rem, 2vw, 1rem);
+            font-weight: 600;
+        }
+
+        .badge.completed {
+            background: rgba(46, 125, 50, 0.18);
+            color: var(--success);
+        }
+
+        .badge.in-progress {
+            background: rgba(255, 152, 0, 0.2);
+            color: var(--warning);
+        }
+
+        .badge.pending {
+            background: rgba(123, 107, 114, 0.1);
+            color: var(--text-muted);
+        }
+
+        .status-item-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-index {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(125, 40, 68, 0.12);
+            color: var(--accent);
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+        }
+
+        .status-label-text {
+            font-weight: 600;
+            color: var(--text-dark);
+            letter-spacing: 0.02em;
+        }
+
+        .status-label-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .status-meta {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            letter-spacing: 0.01em;
+        }
+
+        @media (min-width: 720px) and (max-width: 970px) {
+            .quick-status {
+                padding: clamp(16px, 2vw, 20px);
+            }
+
+            .status-item {
+                font-size: clamp(0.92rem, 1.4vw, 1.05rem);
+                padding: clamp(8px, 1.2vw, 12px) clamp(10px, 1.5vw, 14px);
+                gap: 8px;
+            }
+
+            .status-item-content {
+                gap: 8px;
+            }
+
+            .status-index {
+                width: 24px;
+                height: 24px;
+                font-size: 0.8rem;
+            }
+
+            .status-label-text {
+                font-size: clamp(0.92rem, 1.3vw, 1.05rem);
+            }
+
+            .status-item .badge {
+                font-size: clamp(0.7rem, 1.2vw, 0.85rem);
+                padding: clamp(2px, 0.8vw, 4px) clamp(8px, 1.3vw, 10px);
+            }
+        }
+
+        @media (min-width: 720px) and (max-width: 845px) {
+            .quick-status {
+                padding: clamp(14px, 1.8vw, 18px);
+                gap: clamp(10px, 1.6vw, 14px);
+            }
+
+            .status-item {
+                font-size: clamp(0.85rem, 1.2vw, 0.95rem);
+                padding: clamp(6px, 1vw, 10px) clamp(8px, 1.2vw, 12px);
+                gap: 6px;
+            }
+
+            .status-label-text {
+                font-size: clamp(0.85rem, 1.1vw, 0.98rem);
+            }
+
+            .status-meta {
+                font-size: clamp(0.7rem, 0.95vw, 0.82rem);
+            }
+
+            .status-index {
+                width: 22px;
+                height: 22px;
+                font-size: 0.72rem;
+            }
+
+            .status-item .badge {
+                font-size: clamp(0.65rem, 0.95vw, 0.8rem);
+                padding: clamp(2px, 0.7vw, 3px) clamp(6px, 1vw, 8px);
+            }
+        }
+
+        @media (min-width: 720px) and (max-width: 735px) {
+            .quick-status {
+                padding: clamp(12px, 1.5vw, 16px);
+                gap: clamp(8px, 1.4vw, 12px);
+            }
+
+            .status-item {
+                font-size: clamp(0.8rem, 1.05vw, 0.9rem);
+                padding: clamp(5px, 0.9vw, 8px) clamp(6px, 1vw, 10px);
+                gap: 5px;
+            }
+
+            .status-label-text {
+                font-size: clamp(0.8rem, 1vw, 0.9rem);
+            }
+
+            .status-meta {
+                font-size: clamp(0.65rem, 0.9vw, 0.78rem);
+            }
+
+            .status-index {
+                width: 20px;
+                height: 20px;
+                font-size: 0.68rem;
+            }
+
+            .status-item .badge {
+                font-size: clamp(0.6rem, 0.85vw, 0.75rem);
+                padding: clamp(2px, 0.6vw, 3px) clamp(5px, 0.9vw, 7px);
+            }
+        }
+
+        .button-grid {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .action-btn {
+            position: relative;
+            overflow: hidden;
+            border: none;
+            border-radius: clamp(16px, 2vw, 22px);
+            padding: clamp(12px, 2vw, 16px);
+            background: linear-gradient(135deg, var(--panel-bg) 0%, var(--accent-soft) 100%);
+            color: var(--accent);
+            font-size: clamp(1.1rem, 2.8vw, 1.5rem);
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 16px 26px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            flex: 1 1 calc(50% - 12px);
+            max-width: calc(50% - 12px);
+            white-space: nowrap;
+        }
+
+        .action-btn .short-label {
+            display: none;
+        }
+
+        .action-btn .full-label {
+            display: inline;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 24px 38px rgba(0, 0, 0, 0.18);
+        }
+
+        .action-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16);
+        }
+
+        .action-btn.active {
+            transform: translateY(-3px) scale(1.03);
+            color: #fff;
+            box-shadow: 0 32px 52px rgba(172, 75, 92, 0.42);
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            background: linear-gradient(135deg, #ff6f91 0%, #ff9671 100%);
+        }
+
+        .action-btn.active {
+            background: linear-gradient(135deg, #ffdfdf 0%, #ffb0b0 100%);
+            color: #8c1d1f;
+            box-shadow: 0 26px 42px rgba(255, 176, 176, 0.32);
+        }
+
+        footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: rgba(255, 235, 235, 0.7);
+            font-size: clamp(0.85rem, 1.8vw, 1rem);
+        }
+
+        .connection-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #9e9e9e;
+            box-shadow: none;
+            transition: background 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .dot.online {
+            background: #4caf50;
+            box-shadow: 0 0 12px rgba(76, 175, 80, 0.7);
+        }
+
+        .note {
+            opacity: 0.8;
+        }
+
+        @media (max-width: 860px) {
+            .status-panel {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (min-width: 360px) {
+            html {
+                font-size: 14px;
+            }
+
+            body {
+                padding: 18px;
+            }
+
+            .layout {
+                max-width: 560px;
+                min-height: 700px;
+                padding: 20px;
+                gap: 18px;
+            }
+
+            .info-grid {
+                display: flex;
+                flex-wrap: nowrap;
+                gap: 0;
+                background: var(--panel-bg);
+                border-radius: 22px;
+                padding: 16px 18px;
+                box-shadow: 0 24px 40px rgba(0, 0, 0, 0.12);
+            }
+
+            .info-grid .card {
+                background: transparent;
+                padding: 0 18px 0 0;
+                border-radius: 0;
+                box-shadow: none;
+                border-right: 1px solid rgba(0, 0, 0, 0.08);
+                margin: 0;
+                flex: 1;
+            }
+
+            .info-grid .card:last-child {
+                border-right: none;
+                padding-right: 0;
+            }
+
+            .status-panel {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+
+            .timer-card {
+                padding: 18px;
+                border-radius: 24px;
+            }
+
+            .status-label {
+                font-size: 1.2rem;
+            }
+
+            .timer-display {
+                font-size: clamp(2.8rem, 7vw, 4.4rem);
+            }
+
+            .quick-status {
+                margin-top: 0;
+            }
+
+            .button-grid {
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 12px;
+            }
+
+            .action-btn {
+                flex: 1 1 calc(50% - 12px);
+                max-width: calc(50% - 12px);
+                font-size: 1.4rem;
+                padding: 16px;
+            }
+        }
+
+        @media (max-width: 969px) {
+            .button-grid {
+                display: grid;
+                grid-template-columns: repeat(6, minmax(0, 1fr));
+                gap: 12px;
+            }
+
+            .action-btn {
+                flex: unset;
+                max-width: none;
+                width: 100%;
+            }
+
+            .action-btn:nth-child(-n + 3) {
+                grid-column: span 2;
+            }
+
+            .action-btn:nth-child(n + 4) {
+                grid-column: span 3;
+            }
+        }
+
+        @media (min-width: 970px) {
+            html {
+                font-size: 15px;
+            }
+
+            body {
+                padding: 20px;
+            }
+
+            .layout {
+                max-width: 640px;
+                min-height: 720px;
+                padding: 22px;
+                gap: 20px;
+            }
+
+            header {
+                flex-direction: row;
+                align-items: center;
+            }
+
+            .status-panel {
+                grid-template-columns: 2fr 1fr;
+                gap: 18px;
+            }
+
+            .timer-card {
+                padding: 22px;
+                border-radius: 28px;
+            }
+
+            .status-label {
+                font-size: clamp(1.2rem, 2vw, 1.8rem);
+                margin-bottom: 16px;
+            }
+
+            .timer-display {
+                font-size: clamp(3.4rem, 10vw, 5rem);
+                letter-spacing: 0.18em;
+            }
+
+            .timer-main {
+                gap: 16px;
+            }
+
+            .timer-adjust-column {
+                gap: 8px;
+            }
+
+            .timer-adjust-column button {
+                border-radius: 12px;
+                padding: 6px 12px;
+                font-size: 1.1rem;
+            }
+
+            .button-grid {
+                justify-content: space-between;
+                gap: 12px;
+                flex-wrap: nowrap;
+            }
+
+            .action-btn {
+                flex: 1 1 clamp(120px, 13vw, 160px);
+                max-width: none;
+                padding: clamp(16px, 2.6vw, 22px);
+                font-size: clamp(1.3rem, 3vw, 1.9rem);
+            }
+
+            .action-btn.compact .full-label {
+                display: none;
+            }
+
+            .action-btn.compact .short-label {
+                display: inline;
+            }
+        }
+
+        @media (max-width: 360px) {
+            html {
+                font-size: 12px;
+            }
+
+            .layout {
+                max-width: 360px;
+                min-height: 580px;
+                padding: 10px;
+                gap: 12px;
+            }
+
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+            }
+
+            .card {
+                padding: 10px;
+                border-radius: 14px;
+            }
+
+            .status-panel {
+                gap: 12px;
+            }
+
+            .timer-card {
+                padding: 14px;
+                border-radius: 20px;
+                background: rgba(255, 255, 255, 0.18);
+            }
+
+            .timer-main {
+                flex-direction: row;
+            }
+
+            .button-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .action-btn {
+                width: 100%;
+                max-width: none;
+                grid-column: span 1 !important;
+                font-size: 1.05rem;
+                padding: 12px;
+            }
+        }
+
+        @media (min-width: 720px) {
+            html {
+                font-size: 16px;
+            }
+
+            .layout {
+                max-width: 960px;
+                min-height: 640px;
+                padding: 24px;
+                gap: 24px;
+            }
+
+            .status-panel {
+                grid-template-columns: 2fr 1fr;
+                gap: 20px;
+            }
+
+            .timer-adjust-column button {
+                padding: 8px 14px;
+                font-size: 1.2rem;
+            }
+
+            .timer-display {
+                font-size: clamp(3.2rem, 8vw, 4.8rem);
+            }
+
+            .button-grid {
+                gap: 14px;
+            }
+
+        }
+    </style>
+</head>
+<body>
+    <div class="layout">
+        <header>
+            <div class="room-heading" id="roomHeading">Loading...</div>
+            <div class="updated-at" id="updatedAt">--:--:--</div>
+        </header>
+
+        <section class="info-grid">
+            <article class="card">
+                <span class="card-label">Patient</span>
+                <div class="patient-name">
+                    <span id="maskedPatient">-</span>
+                </div>
+            </article>
+            <article class="card">
+                <span class="card-label">주치의</span>
+                <div class="doctor-info" id="doctorInfo">-</div>
+            </article>
+            <article class="card">
+                <span class="card-label">심리상담</span>
+                <div class="counselor-info" id="counselorInfo">-</div>
+            </article>
+        </section>
+
+        <section class="status-panel">
+            <div class="timer-card" id="timerCard">
+                <div class="status-label idle" id="statusLabel">대기 중</div>
+                <div class="timer-main">
+                    <div class="timer-display" id="timerDisplay">00:00</div>
+                    <div class="timer-adjust-column">
+                        <button id="increaseTimer" title="1분 추가">▲</button>
+                        <button id="decreaseTimer" title="1분 감소">▼</button>
+                    </div>
+                </div>
+            </div>
+
+            <aside class="quick-status" id="quickStatusPanel">
+                <div class="quick-status-header">
+                    <h3>치료 진행</h3>
+                    <button id="statusToggle" class="status-toggle" aria-expanded="false">더보기</button>
+                </div>
+                <div class="status-list" id="statusList">
+                    <div class="status-item">
+                        <span>데이터 없음</span>
+                        <span class="badge pending">-</span>
+                    </div>
+                </div>
+            </aside>
+        </section>
+
+        <section class="button-grid">
+            <button class="action-btn" data-action="침">침</button>
+            <button class="action-btn" data-action="부항">부항</button>
+            <button class="action-btn" data-action="뜸">뜸</button>
+            <button class="action-btn compact" data-action="원장상담">
+                <span class="full-label">원장진료</span>
+                <span class="short-label">원장</span>
+            </button>
+            <button class="action-btn compact" data-action="심리상담">
+                <span class="full-label">심리상담</span>
+                <span class="short-label">심리</span>
+            </button>
+            <button class="action-btn" data-action="검사중">검사중</button>
+            <button class="action-btn" data-action="안내중">안내중</button>
+        </section>
+
+        <footer>
+            <div class="connection-indicator">
+                <span class="dot" id="connectionDot"></span>
+                <span id="connectionLabel">연결 대기 중</span>
+            </div>
+            <div class="note">문 앞 보기용 화면</div>
+        </footer>
+    </div>
+
+    <audio id="alarmSound" src="beep.mp3" loop></audio>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const queryRoom = params.get('room');
+        const pathParts = window.location.pathname.split('/').filter(Boolean);
+        const isRoom2Route = pathParts.length >= 2 && pathParts[pathParts.length - 2] === 'room2';
+        const pathRoomCandidate = isRoom2Route ? decodeURIComponent(pathParts[pathParts.length - 1]) : '';
+        const roomName = (queryRoom && queryRoom.trim()) ? decodeURIComponent(queryRoom.trim()) : pathRoomCandidate;
+
+        const roomHeadingEl = document.getElementById('roomHeading');
+        const updatedAtEl = document.getElementById('updatedAt');
+        const maskedPatientEl = document.getElementById('maskedPatient');
+        const doctorInfoEl = document.getElementById('doctorInfo');
+        const counselorInfoEl = document.getElementById('counselorInfo');
+        const statusLabelEl = document.getElementById('statusLabel');
+        const timerDisplayEl = document.getElementById('timerDisplay');
+        const statusListEl = document.getElementById('statusList');
+        const statusToggleBtn = document.getElementById('statusToggle');
+        const quickStatusPanel = document.getElementById('quickStatusPanel');
+        const timerCardEl = document.getElementById('timerCard');
+        const connectionDotEl = document.getElementById('connectionDot');
+        const connectionLabelEl = document.getElementById('connectionLabel');
+        const increaseTimerBtn = document.getElementById('increaseTimer');
+        const decreaseTimerBtn = document.getElementById('decreaseTimer');
+        const actionButtons = document.querySelectorAll('.action-btn');
+        const alarmSound = document.getElementById('alarmSound');
+
+        let lastTimerState = null;
+        let lastStatusData = {};
+        let lastCounselorName = '-';
+        let currentActiveLabel = '';
+        let previousActiveLabel = '';
+        let statusHistory = [];
+        let statusSequence = 0;
+        let currentPatientName = '';
+        let isWideLayout = window.innerWidth >= 720;
+        let visibleLimit = getVisibleLimit(window.innerWidth);
+        let statusListExpanded = visibleLimit === Infinity ? true : false;
+        let lastNeedsToggle = false;
+
+        const LABEL_DISPLAY_MAP = {
+            '침': '침',
+            '부항': '부항',
+            '뜸': '뜸',
+            '진료중': '원장진료',
+            '상담중': '심리상담',
+            '검사중': '검사중',
+            '안내중': '안내중',
+            '심상': '심리상담',
+            '원상': '원장진료'
+        };
+
+        const TRANSIENT_LABELS = new Set(['검사중', '안내중']);
+
+        if (!roomName) {
+            roomHeadingEl.textContent = '방 이름 없음';
+        } else {
+            roomHeadingEl.textContent = `${roomName} (문 앞)`;
+        }
+
+        function maskName(name) {
+            if (!name) return '환자 없음';
+            const trimmed = name.trim();
+            if (!trimmed) return '환자 없음';
+            if (trimmed.length === 1) return trimmed;
+            const first = trimmed.charAt(0);
+            const last = trimmed.charAt(trimmed.length - 1);
+            return `${first} * ${last}`;
+        }
+
+        function updateTimestamp() {
+            const now = new Date();
+            updatedAtEl.textContent = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+        }
+
+        function formatTime(seconds) {
+            const sec = Math.max(0, Math.floor(seconds));
+            const minPart = Math.floor(sec / 60);
+            const secPart = sec % 60;
+            return `${minPart.toString().padStart(2, '0')}:${secPart.toString().padStart(2, '0')}`;
+        }
+
+        function labelClassForStatus(label) {
+            if (['침', '부항', '뜸'].includes(label)) {
+                return 'treatment';
+            }
+            if (['진료중', '상담중', '검사중', '안내중'].includes(label)) {
+                return 'progress';
+            }
+            if (!label || label === '대기 중' || label === '대기중') {
+                return 'idle';
+            }
+            return 'progress';
+        }
+
+        function labelStyleClass(label) {
+            const styleMap = {
+                '침': 'label-chim',
+                '부항': 'label-buhang',
+                '뜸': 'label-ddeum',
+                '진료중': 'label-jinryo',
+                '상담중': 'label-sangdam',
+                '검사중': 'label-gumsa',
+                '안내중': 'label-annae'
+            };
+            return styleMap[label] || '';
+        }
+
+        function getVisibleLimit(width) {
+            if (width < 720) return Infinity;
+            if (width < 750) return 6;
+            if (width < 845) return 5;
+            if (width < 970) return 4;
+            return 3;
+        }
+
+        function updateLayoutMode() {
+            const newIsWide = window.innerWidth >= 720;
+            const newVisibleLimit = getVisibleLimit(window.innerWidth);
+            const limitChanged = newVisibleLimit !== visibleLimit;
+            if (newIsWide !== isWideLayout || limitChanged) {
+                isWideLayout = newIsWide;
+                visibleLimit = newVisibleLimit;
+                statusListExpanded = visibleLimit === Infinity ? true : false;
+                lastNeedsToggle = false;
+                renderStatusList();
+            } else if (!newIsWide && statusListExpanded === false) {
+                statusListExpanded = true;
+                renderStatusList();
+            }
+        }
+        function resetStatusHistory() {
+            statusHistory = [];
+            statusSequence = 0;
+            currentActiveLabel = '';
+            previousActiveLabel = '';
+            statusListExpanded = visibleLimit === Infinity ? true : false;
+            lastNeedsToggle = false;
+        }
+
+        function registerStatus(label, statusType, options = {}) {
+            if (!label) return;
+            const {
+                isTransient = false,
+                sequence = null,
+                startedAt = null,
+                finishedAt = null
+            } = options;
+
+            const normalizedSequence = Number.isFinite(sequence) ? sequence : null;
+            const startTimestamp = Number.isFinite(startedAt)
+                ? startedAt
+                : startedAt
+                    ? Date.parse(startedAt)
+                    : null;
+            const finishedTimestamp = Number.isFinite(finishedAt)
+                ? finishedAt
+                : finishedAt
+                    ? Date.parse(finishedAt)
+                    : null;
+
+            let entry = statusHistory.find(item => item.label === label);
+            if (!entry) {
+                entry = {
+                    label,
+                    status: statusType,
+                    sequence: normalizedSequence,
+                    startedAt: Number.isFinite(startTimestamp) ? startTimestamp : null,
+                    finishedAt: Number.isFinite(finishedTimestamp) ? finishedTimestamp : null,
+                    manualOrder: null,
+                    isTransient: !!isTransient
+                };
+
+                if (!Number.isFinite(entry.sequence) && !Number.isFinite(entry.startedAt)) {
+                    entry.manualOrder = statusSequence++;
+                }
+
+                statusHistory.push(entry);
+                return;
+            }
+
+            if (!(statusType === 'in-progress' && entry.status === 'completed')) {
+                entry.status = statusType;
+            }
+
+            if (Number.isFinite(normalizedSequence)) {
+                entry.sequence = normalizedSequence;
+            }
+
+            if (Number.isFinite(startTimestamp)) {
+                if (!Number.isFinite(entry.startedAt) || startTimestamp < entry.startedAt) {
+                    entry.startedAt = startTimestamp;
+                }
+            }
+
+            if (Number.isFinite(finishedTimestamp)) {
+                entry.finishedAt = finishedTimestamp;
+            }
+
+            if (!Number.isFinite(entry.sequence) && !Number.isFinite(entry.startedAt) && entry.manualOrder === null) {
+                entry.manualOrder = statusSequence++;
+            }
+
+            if (typeof isTransient === 'boolean') {
+                entry.isTransient = isTransient;
+            }
+        }
+
+        function formatTimestampValue(timestamp) {
+            let timeNumber = null;
+            if (Number.isFinite(timestamp)) {
+                timeNumber = timestamp;
+            } else if (timestamp) {
+                const parsed = Date.parse(timestamp);
+                if (Number.isFinite(parsed)) {
+                    timeNumber = parsed;
+                }
+            }
+            if (!Number.isFinite(timeNumber)) return '';
+            const date = new Date(timeNumber);
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            const seconds = date.getSeconds().toString().padStart(2, '0');
+            return `${hours}:${minutes}:${seconds}`;
+        }
+
+        function updateHistoryFromStatus(statusData, counselorName) {
+            const steps = [
+                { key: '심상', label: '심리상담', conditional: !!counselorName && counselorName !== '-' && counselorName !== '원장님만' },
+                { key: '원상', label: '원장진료', conditional: true },
+                { key: '침', label: '침' },
+                { key: '부항', label: '부항' },
+                { key: '뜸', label: '뜸' },
+                { key: '검사중', label: '검사중' },
+                { key: '안내중', label: '안내중' },
+            ];
+
+            steps.forEach(step => {
+                if (step.conditional === false) return;
+                const state = statusData[step.key];
+                if (!state) return;
+                if (!state.completed && !state.inProgress) return;
+
+                const label = step.label;
+                const statusType = state.completed ? 'completed' : 'in-progress';
+                registerStatus(label, statusType, {
+                    sequence: Number.isFinite(state.sequence) ? state.sequence : null,
+                    startedAt: state.startedAt || null,
+                    finishedAt: state.finishedAt || null
+                });
+            });
+        }
+
+        function updateHistoryFromActiveLabel(label) {
+            const displayLabel = LABEL_DISPLAY_MAP[label?.trim()];
+            if (!displayLabel) return;
+            const isTransient = TRANSIENT_LABELS.has(label?.trim());
+            registerStatus(displayLabel, 'in-progress', { isTransient, startedAt: Date.now() });
+        }
+
+        function finalizeTransientLabel(label) {
+            if (!label) return;
+            if (!TRANSIENT_LABELS.has(label.trim())) return;
+            const displayLabel = LABEL_DISPLAY_MAP[label.trim()];
+            if (!displayLabel) return;
+            registerStatus(displayLabel, 'completed');
+        }
+
+        function renderStatusList() {
+            if (!statusHistory.length) {
+                statusListEl.innerHTML = `
+                    <div class="status-item">
+                        <span>진행 내역 없음</span>
+                        <span class="badge pending">-</span>
+                    </div>
+                `;
+                if (statusToggleBtn) {
+                    statusToggleBtn.classList.remove('visible');
+                }
+                return;
+            }
+
+            function compareNumber(a, b) {
+                const validA = Number.isFinite(a) ? a : Number.POSITIVE_INFINITY;
+                const validB = Number.isFinite(b) ? b : Number.POSITIVE_INFINITY;
+                if (validA === validB) return 0;
+                return validA - validB;
+            }
+
+            const orderedItems = [...statusHistory]
+                .filter(item => item.status === 'completed' || item.status === 'in-progress')
+                .sort((a, b) => {
+                    const seqDiff = compareNumber(a.sequence, b.sequence);
+                    if (seqDiff !== 0) return seqDiff;
+
+                    const timeDiff = compareNumber(a.startedAt, b.startedAt);
+                    if (timeDiff !== 0) return timeDiff;
+
+                    return compareNumber(a.manualOrder, b.manualOrder);
+                });
+
+            if (!orderedItems.length) {
+                statusListEl.innerHTML = `
+                    <div class="status-item">
+                        <span>진행 내역 없음</span>
+                        <span class="badge pending">-</span>
+                    </div>
+                `;
+                if (statusToggleBtn) {
+                    statusToggleBtn.classList.remove('visible');
+                }
+                return;
+            }
+
+            const needsToggle = Number.isFinite(visibleLimit) && orderedItems.length > visibleLimit;
+            if (needsToggle && !lastNeedsToggle) {
+                statusListExpanded = false;
+            }
+            if (!needsToggle) {
+                statusListExpanded = true;
+            }
+            lastNeedsToggle = needsToggle;
+
+            if (statusToggleBtn) {
+                if (needsToggle) {
+                    statusToggleBtn.classList.add('visible');
+                    statusToggleBtn.textContent = statusListExpanded ? '접기' : `더보기 (${orderedItems.length - visibleLimit})`;
+                    statusToggleBtn.setAttribute('aria-expanded', statusListExpanded);
+                } else {
+                    statusToggleBtn.classList.remove('visible');
+                    statusToggleBtn.setAttribute('aria-expanded', 'false');
+                }
+            }
+
+            const displayItems = (needsToggle && !statusListExpanded) ? orderedItems.slice(0, visibleLimit) : orderedItems;
+
+            const useCompactLayout = needsToggle && !statusListExpanded && isWideLayout;
+            if (quickStatusPanel) {
+                quickStatusPanel.classList.toggle('compact', useCompactLayout);
+            }
+            if (timerCardEl) {
+                timerCardEl.classList.toggle('compact', useCompactLayout);
+            }
+
+            statusListEl.innerHTML = displayItems.map((item) => {
+                const originalIndex = orderedItems.indexOf(item);
+                const startText = formatTimestampValue(item.startedAt);
+                const endText = formatTimestampValue(item.finishedAt);
+                if (item.status === 'completed' && !endText && item.finishedAt) {
+                    console.log('⚠️ 완료 항목인데 endText가 없음:', { label: item.label, finishedAt: item.finishedAt, finishedAtType: typeof item.finishedAt });
+                }
+                let metaText = '';
+                if (item.status === 'completed') {
+                    if (startText && endText) {
+                        metaText = `${startText} - ${endText}`;
+                    } else if (startText) {
+                        metaText = startText;
+                    } else if (endText) {
+                        metaText = endText;
+                    }
+                } else if (item.status === 'in-progress' && startText) {
+                    metaText = startText;
+                }
+
+                return `
+                    <div class="status-item">
+                        <div class="status-item-content">
+                            <span class="status-index">${originalIndex + 1}</span>
+                            <div class="status-label-group">
+                                <span class="status-label-text">${item.label}</span>
+                                ${metaText ? `<span class="status-meta">${metaText}</span>` : ''}
+                            </div>
+                        </div>
+                        <span class="badge ${item.status === 'completed' ? 'completed' : 'in-progress'}">
+                            ${item.status === 'completed' ? '완료' : '진행 중'}
+                        </span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function fetchTreatmentStatus() {
+            if (!roomName) return;
+            try {
+                const response = await fetch(`/api/room/${encodeURIComponent(roomName)}/treatment-status`);
+                const data = await response.json();
+
+                const hasPatient = data.hasPatient;
+                const patientName = (data.patientName || '').trim();
+
+                if (hasPatient) {
+                    if (currentPatientName !== patientName) {
+                        currentPatientName = patientName;
+                        resetStatusHistory();
+                    }
+                } else if (currentPatientName) {
+                    currentPatientName = '';
+                    resetStatusHistory();
+                }
+
+                maskedPatientEl.textContent = hasPatient ? maskName(patientName) : '환자 없음';
+
+                doctorInfoEl.textContent = (data.doctorName && data.doctorName.trim()) ? data.doctorName.trim() : '-';
+                const counselorName = (data.counselorName && data.counselorName.trim()) ? data.counselorName.trim() : '-';
+                counselorInfoEl.textContent = counselorName;
+
+                if (!hasPatient) {
+                    resetStatusHistory();
+                    renderStatusList();
+                } else {
+                    lastStatusData = data.treatmentStatus || {};
+                    lastCounselorName = counselorName;
+                    updateHistoryFromStatus(lastStatusData, counselorName);
+                    updateHistoryFromActiveLabel(currentActiveLabel);
+                    renderStatusList();
+                }
+                updateTimestamp();
+            } catch (error) {
+                console.error('치료 진행 조회 실패', error);
+            }
+        }
+
+        function setStatusLabel(label) {
+            const displayLabel = label && label.trim() ? label.trim() : '대기 중';
+            statusLabelEl.textContent = displayLabel;
+            const baseClass = labelClassForStatus(displayLabel);
+            const styleClass = labelStyleClass(displayLabel);
+            statusLabelEl.className = `status-label ${baseClass} ${styleClass}`;
+        }
+
+        function setTimerDisplay(timeLeft, isCountUp) {
+            timerDisplayEl.textContent = formatTime(timeLeft);
+            timerDisplayEl.classList.toggle('countup', !!isCountUp);
+        }
+
+        function highlightButton(action) {
+            actionButtons.forEach(btn => {
+                const btnAction = btn.getAttribute('data-action');
+                if (btnAction === action) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        const socket = io();
+
+        socket.on('connect', () => {
+            connectionDotEl.classList.add('online');
+            connectionLabelEl.textContent = '연결됨';
+            fetchTreatmentStatus();
+            updateTimestamp();
+            setTimeout(() => {
+                if (roomName) {
+                    socket.emit('requestRoomState', { room: roomName });
+                }
+            }, 300);
+        });
+
+        socket.on('disconnect', () => {
+            connectionDotEl.classList.remove('online');
+            connectionLabelEl.textContent = '연결 끊김';
+        });
+
+        socket.on('timerState', ({ room, state }) => {
+            if (room !== roomName) return;
+            if (!state) return;
+
+            lastTimerState = state;
+                setStatusLabel(state.label);
+                const isCountUpMode = ['진료중', '상담중', '검사중', '안내중'].includes(state.label);
+                setTimerDisplay(state.timeLeft, state.isCountUp || isCountUpMode);
+
+            previousActiveLabel = currentActiveLabel;
+            currentActiveLabel = state.label ? state.label.trim() : '';
+            const normalizedLabel = currentActiveLabel;
+            const highlightMap = {
+                '침': '침',
+                '부항': '부항',
+                '뜸': '뜸',
+                '진료중': '원장상담',
+                '상담중': '심리상담',
+                '검사중': '검사중',
+                '안내중': '안내중'
+            };
+            if (highlightMap[normalizedLabel]) {
+                highlightButton(highlightMap[normalizedLabel]);
+            }
+
+            if (previousActiveLabel && previousActiveLabel !== currentActiveLabel) {
+                finalizeTransientLabel(previousActiveLabel);
+            }
+
+            updateHistoryFromStatus(lastStatusData, lastCounselorName);
+            updateHistoryFromActiveLabel(currentActiveLabel);
+            renderStatusList();
+
+            if (!state.isRunning) {
+                highlightButton(null);
+            }
+
+            updateTimestamp();
+        });
+
+        socket.on('timerEnded', ({ room }) => {
+            if (room !== roomName) return;
+            alarmSound.play().catch(() => {});
+            updateTimestamp();
+        });
+
+        socket.on('doneAlarm', ({ room, label, finishedAt }) => {
+            if (room !== roomName) return;
+            alarmSound.pause();
+            alarmSound.currentTime = 0;
+            const trimmedLabel = label ? label.trim() : '';
+            if (trimmedLabel) {
+                const displayLabel = LABEL_DISPLAY_MAP[trimmedLabel] || trimmedLabel;
+                console.log('🔔 doneAlarm 수신:', { label: trimmedLabel, displayLabel, finishedAt });
+                registerStatus(displayLabel, 'completed', { finishedAt: finishedAt || new Date().toISOString() });
+            }
+            renderStatusList();
+            highlightButton(null);
+            updateTimestamp();
+        });
+
+        socket.on('nameUpdate', ({ room, name }) => {
+            if (room !== roomName) return;
+            const trimmed = (name || '').trim();
+            const hasPatient = !!trimmed;
+            maskedPatientEl.textContent = hasPatient ? maskName(trimmed) : '환자 없음';
+            if (hasPatient) {
+                if (currentPatientName !== trimmed) {
+                    currentPatientName = trimmed;
+                    resetStatusHistory();
+                }
+            } else if (currentPatientName) {
+                currentPatientName = '';
+                resetStatusHistory();
+                renderStatusList();
+            } else {
+                renderStatusList();
+            }
+            fetchTreatmentStatus();
+            updateTimestamp();
+        });
+
+        socket.on('namesRefreshed', (payload) => {
+            const names = payload?.names || payload || {};
+            const name = names[roomName];
+            const trimmed = (name || '').trim();
+            const hasPatient = !!trimmed;
+            maskedPatientEl.textContent = hasPatient ? maskName(trimmed) : '환자 없음';
+            if (hasPatient) {
+                if (currentPatientName !== trimmed) {
+                    currentPatientName = trimmed;
+                    resetStatusHistory();
+                }
+            } else if (currentPatientName) {
+                currentPatientName = '';
+                resetStatusHistory();
+                renderStatusList();
+            } else {
+                renderStatusList();
+            }
+            fetchTreatmentStatus();
+            updateTimestamp();
+        });
+
+        socket.on('needleCountSaved', ({ room }) => {
+            if (room !== roomName) return;
+            updateTimestamp();
+        });
+
+        function emitAdjustTimer(diff) {
+            if (!roomName) return;
+            socket.emit('adjustTimer', { room: roomName, diff });
+        }
+
+        increaseTimerBtn.addEventListener('click', () => emitAdjustTimer(60));
+        decreaseTimerBtn.addEventListener('click', () => emitAdjustTimer(-60));
+
+        // 재생/초기화 버튼 제거됨
+
+        actionButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                if (!roomName) return;
+                const action = button.getAttribute('data-action');
+                const actionLabelMap = {
+                    '침': '침',
+                    '부항': '부항',
+                    '뜸': '뜸',
+                    '원장상담': '진료중',
+                    '심리상담': '상담중',
+                    '검사중': '검사중',
+                    '안내중': '안내중'
+                };
+                const expectedLabel = actionLabelMap[action] || '';
+                const isActive = button.classList.contains('active') && expectedLabel && currentActiveLabel === expectedLabel;
+
+                if (isActive) {
+                    socket.emit('doneAlarm', { room: roomName });
+                    highlightButton(null);
+                    return;
+                }
+
+                highlightButton(action);
+
+                if (['침', '부항', '뜸'].includes(action)) {
+                    socket.emit('startTimer', {
+                        room: roomName,
+                        duration: 15 * 60,
+                        force: true,
+                        label: action
+                    });
+                    return;
+                }
+
+                if (action === '원장상담') {
+                    socket.emit('startTimer', {
+                        room: roomName,
+                        duration: 0,
+                        force: true,
+                        label: '진료중'
+                    });
+                    return;
+                }
+
+                if (action === '심리상담') {
+                    socket.emit('startTimer', {
+                        room: roomName,
+                        duration: 0,
+                        force: true,
+                        label: '상담중'
+                    });
+                    return;
+                }
+
+                if (['검사중', '안내중'].includes(action)) {
+                    socket.emit('startTimer', {
+                        room: roomName,
+                        duration: 0,
+                        force: true,
+                        label: action
+                    });
+                }
+            });
+        });
+
+        if (statusToggleBtn) {
+            statusToggleBtn.addEventListener('click', () => {
+                statusListExpanded = !statusListExpanded;
+                if (statusToggleBtn) {
+                    statusToggleBtn.setAttribute('aria-expanded', statusListExpanded);
+                }
+                renderStatusList();
+            });
+        }
+
+        window.addEventListener('resize', () => updateLayoutMode());
+        updateLayoutMode();
+
+        if (roomName) {
+            document.title = `${roomName} 문앞 현황`;
+        }
+
+        setInterval(updateTimestamp, 1000);
+    </script>
+</body>
+</html>
+
