@@ -3,18 +3,39 @@ const http = require('http');
 const socketIo = require('socket.io');
 const axios = require('axios');
 const dotenv = require('dotenv');
-const Airtable = require('airtable');
 const session = require('express-session');
 const { google } = require('googleapis');
 
 dotenv.config(); // 👈 반드시 상단에서 호출
 
-// Airtable 설정 - .env에서 가져오기
+// Airtable 설정 (선택적 - 더 이상 사용하지 않음)
 const AIRTABLE_API_KEY = process.env.AIRTABLE_API_KEY;
 const AIRTABLE_BASE_ID = process.env.AIRTABLE_BASE_ID;
 const AIRTABLE_TABLE_NAME = process.env.AIRTABLE_TABLE_NAME;
 
-const base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(AIRTABLE_BASE_ID);
+// Airtable 초기화 (선택적 - API 키가 있을 때만)
+let base = null;
+if (AIRTABLE_API_KEY && AIRTABLE_BASE_ID) {
+    try {
+        // airtable 패키지가 설치되어 있지 않을 수 있으므로 try-catch로 처리
+        let Airtable;
+        try {
+            Airtable = require('airtable');
+        } catch (requireError) {
+            console.log('ℹ️ airtable 패키지가 설치되지 않았습니다. Google Sheets만 사용합니다.');
+            Airtable = null;
+        }
+        
+        if (Airtable) {
+            base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(AIRTABLE_BASE_ID);
+            console.log('✅ Airtable 초기화 완료 (선택적 사용)');
+        }
+    } catch (error) {
+        console.warn('⚠️ Airtable 초기화 실패 (무시됨):', error.message);
+    }
+} else {
+    console.log('ℹ️ Airtable 설정이 없습니다. Google Sheets만 사용합니다.');
+}
 
 // Google Sheets 설정 - .env에서 가져오기
 const GOOGLE_SHEETS_SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID; // 로그인 정보가 있는 스프레드시트 ID
@@ -676,14 +697,18 @@ async function fetchNamesFromAirtable() {
     }
 }
 
-// Airtable 수납 테이블 업데이트 함수 (진행 중인 치료는 업데이트, 완료된 치료는 추가)
+// Airtable 수납 테이블 업데이트 함수 (더 이상 사용하지 않음 - Google Sheets로 전환 예정)
 async function updateAirtablePayment(recordId, treatmentInfo, isCompleted = false) {
+    if (!base || !AIRTABLE_TABLE_NAME) {
+        console.log('ℹ️ Airtable이 설정되지 않아 업데이트를 건너뜁니다.');
+        return Promise.resolve();
+    }
     try {
         console.log(`📝 Airtable 수납 테이블 업데이트: recordId=${recordId}, treatmentInfo=${treatmentInfo}, isCompleted=${isCompleted}`);
         
         return new Promise((resolve, reject) => {
             // 기존 내용을 지우고 새롭게 업데이트
-            base(AIRTABLE_TABLE_NAME).update(recordId, {
+            safeAirtableUpdate(recordId, {
                 '비고(순서)': treatmentInfo
             }, (err, record) => {
                 if (err) {
@@ -701,8 +726,13 @@ async function updateAirtablePayment(recordId, treatmentInfo, isCompleted = fals
     }
 }
 
-// Airtable에서 기존 데이터 확인 함수
+// Airtable에서 기존 데이터 확인 함수 (더 이상 사용하지 않음 - Google Sheets로 전환 예정)
 async function getAirtableRecord(recordId) {
+    if (!base || !AIRTABLE_TABLE_NAME) {
+        console.log('ℹ️ Airtable이 설정되지 않아 레코드 조회를 건너뜁니다.');
+        // 빈 레코드 반환 (기존 코드와의 호환성 유지)
+        return { fields: {} };
+    }
     try {
         return new Promise((resolve, reject) => {
             base(AIRTABLE_TABLE_NAME).find(recordId, (err, record) => {
@@ -720,8 +750,22 @@ async function getAirtableRecord(recordId) {
     }
 }
 
-// Airtable 치료별 시간 기록 함수 (침 2차 기록 지원)
+// Airtable 업데이트 헬퍼 함수 (base가 없으면 무시)
+function safeAirtableUpdate(recordId, updateData, callback) {
+    if (!base || !AIRTABLE_TABLE_NAME) {
+        console.log('ℹ️ Airtable이 설정되지 않아 업데이트를 건너뜁니다.');
+        if (callback) callback(null, { fields: {} });
+        return;
+    }
+    base(AIRTABLE_TABLE_NAME).update(recordId, updateData, callback);
+}
+
+// Airtable 치료별 시간 기록 함수 (더 이상 사용하지 않음 - Google Sheets로 전환 예정)
 async function updateTreatmentTime(recordId, treatmentType, timeValue) {
+    if (!base || !AIRTABLE_TABLE_NAME) {
+        console.log('ℹ️ Airtable이 설정되지 않아 치료 시간 기록을 건너뜁니다.');
+        return Promise.resolve();
+    }
     try {
         console.log(`📝 Airtable 치료 시간 기록: recordId=${recordId}, ${treatmentType}=${timeValue}`);
         
@@ -748,7 +792,7 @@ async function updateTreatmentTime(recordId, treatmentType, timeValue) {
             const updateData = {};
             updateData[treatmentType] = timeValue;
             
-            base(AIRTABLE_TABLE_NAME).update(recordId, updateData, (err, record) => {
+            safeAirtableUpdate(recordId, updateData, (err, record) => {
                 if (err) {
                     console.error(`❌ Airtable ${treatmentType} 시간 기록 실패:`, err);
                     reject(err);
@@ -1016,7 +1060,7 @@ io.on('connection', async (socket) => {
                     try {
                         // 원끝 체크박스 업데이트
                         await new Promise((resolve, reject) => {
-                            base(AIRTABLE_TABLE_NAME).update(recordId, {
+                            safeAirtableUpdate(recordId, {
                                 '원끝': true
                             }, (err, record) => {
                                 if (err) {
