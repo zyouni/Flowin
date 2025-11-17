@@ -4,6 +4,8 @@ const socketIo = require('socket.io');
 const axios = require('axios');
 const dotenv = require('dotenv');
 const Airtable = require('airtable');
+const session = require('express-session');
+const { google } = require('googleapis');
 
 dotenv.config(); // 👈 반드시 상단에서 호출
 
@@ -14,15 +16,208 @@ const AIRTABLE_TABLE_NAME = process.env.AIRTABLE_TABLE_NAME;
 
 const base = new Airtable({ apiKey: AIRTABLE_API_KEY }).base(AIRTABLE_BASE_ID);
 
+// Google Sheets 설정 - .env에서 가져오기
+const GOOGLE_SHEETS_SPREADSHEET_ID = process.env.GOOGLE_SHEETS_SPREADSHEET_ID; // 로그인 정보가 있는 스프레드시트 ID
+const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY ? process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n') : null;
+
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
     allowEIO3: true
 });
 
+// 세션 설정
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-secret-key-change-in-production',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        secure: process.env.NODE_ENV === 'production', // HTTPS에서만 쿠키 전송 (프로덕션)
+        httpOnly: true,
+        maxAge: 24 * 60 * 60 * 1000 // 24시간
+    }
+}));
 
 app.use(express.static('public'));
 app.use(express.json()); // JSON 파싱을 위한 미들웨어 추가
+
+// Google Sheets API 클라이언트 초기화
+let sheetsClient = null;
+if (GOOGLE_SERVICE_ACCOUNT_EMAIL && GOOGLE_PRIVATE_KEY && GOOGLE_SHEETS_SPREADSHEET_ID) {
+    try {
+        const auth = new google.auth.JWT(
+            GOOGLE_SERVICE_ACCOUNT_EMAIL,
+            null,
+            GOOGLE_PRIVATE_KEY,
+            ['https://www.googleapis.com/auth/spreadsheets.readonly']
+        );
+        sheetsClient = google.sheets({ version: 'v4', auth });
+        console.log('✅ Google Sheets API 클라이언트 초기화 완료');
+    } catch (error) {
+        console.error('❌ Google Sheets API 초기화 실패:', error.message);
+    }
+} else {
+    console.warn('⚠️ Google Sheets 환경변수가 설정되지 않았습니다. 로그인 기능이 작동하지 않을 수 있습니다.');
+}
+
+// Google Sheets에서 로그인 정보 조회
+async function verifyLogin(loginId, password) {
+    if (!sheetsClient || !GOOGLE_SHEETS_SPREADSHEET_ID) {
+        throw new Error('Google Sheets 설정이 완료되지 않았습니다.');
+    }
+    
+    try {
+        // 스프레드시트에서 데이터 읽기 (첫 번째 시트)
+        const response = await sheetsClient.spreadsheets.values.get({
+            spreadsheetId: GOOGLE_SHEETS_SPREADSHEET_ID,
+            range: 'A:Z', // 전체 시트 읽기
+        });
+        
+        const rows = response.data.values;
+        if (!rows || rows.length === 0) {
+            console.log('⚠️ 스프레드시트에 데이터가 없습니다.');
+            return null;
+        }
+        
+        // 첫 번째 행은 헤더로 간주
+        const headers = rows[0].map(h => (h || '').trim());
+        const headersLower = headers.map(h => h.toLowerCase());
+        
+        // loginId 컬럼 찾기 (loginId, login_id, 아이디, id 등)
+        const loginIdIndex = headersLower.findIndex(h => 
+            h === 'loginid' || h === 'login_id' || 
+            h.includes('login') && h.includes('id') ||
+            h === '아이디' || h === 'id' || h === 'hospitalid'
+        );
+        
+        // password 컬럼 찾기
+        const passwordIndex = headersLower.findIndex(h => 
+            h === 'password' || h === 'pw' || h === '비밀번호'
+        );
+        
+        if (loginIdIndex === -1 || passwordIndex === -1) {
+            console.error('❌ 스프레드시트에 필요한 컬럼을 찾을 수 없습니다.');
+            console.log('찾은 헤더:', headers);
+            console.log('loginIdIndex:', loginIdIndex, 'passwordIndex:', passwordIndex);
+            return null;
+        }
+        
+        console.log(`✅ 컬럼 찾기 성공: loginId=${headers[loginIdIndex]}, password=${headers[passwordIndex]}`);
+        
+        // 데이터 행에서 일치하는 로그인 정보 찾기
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            // 빈 행은 건너뛰기
+            if (!row || row.length === 0) continue;
+            
+            const rowLoginId = (row[loginIdIndex] || '').toString().trim();
+            const rowPassword = (row[passwordIndex] || '').toString().trim();
+            
+            // 빈 값은 건너뛰기
+            if (!rowLoginId || !rowPassword) continue;
+            
+            console.log(`🔍 확인 중: 입력된 loginId="${loginId}", 스프레드시트 loginId="${rowLoginId}"`);
+            
+            if (rowLoginId === loginId && rowPassword === password) {
+                // 로그인 성공 - 병원 정보 반환
+                const hospitalInfo = {
+                    loginId: rowLoginId,
+                    // 모든 헤더 정보를 포함
+                };
+                
+                // 헤더에 다른 정보가 있다면 포함
+                headers.forEach((header, index) => {
+                    if (row[index] !== undefined && row[index] !== null && row[index] !== '') {
+                        hospitalInfo[header] = row[index].toString().trim();
+                    }
+                });
+                
+                console.log(`✅ 로그인 성공:`, hospitalInfo);
+                return hospitalInfo;
+            }
+        }
+        
+        console.log(`❌ 일치하는 로그인 정보를 찾을 수 없습니다.`);
+        return null; // 일치하는 정보 없음
+    } catch (error) {
+        console.error('❌ Google Sheets 조회 실패:', error);
+        throw error;
+    }
+}
+
+// 인증 미들웨어
+function requireAuth(req, res, next) {
+    if (req.session && req.session.hospitalId) {
+        return next();
+    }
+    // 로그인 페이지로 리다이렉트
+    res.redirect('/login.html');
+}
+
+// 로그인 라우트
+app.get('/login.html', (req, res) => {
+    // 이미 로그인되어 있으면 메인 페이지로 리다이렉트
+    if (req.session && req.session.hospitalId) {
+        return res.redirect('/');
+    }
+    res.sendFile(__dirname + '/public/login.html');
+});
+
+app.post('/api/login', async (req, res) => {
+    try {
+        const { hospitalId, password, loginId } = req.body;
+        
+        // hospitalId 또는 loginId 둘 다 지원
+        const inputLoginId = loginId || hospitalId;
+        
+        if (!inputLoginId || !password) {
+            return res.status(400).json({ error: '로그인 ID와 비밀번호를 입력해주세요.' });
+        }
+        
+        const hospitalInfo = await verifyLogin(inputLoginId, password);
+        
+        if (hospitalInfo) {
+            // 로그인 성공 - 세션에 저장
+            req.session.hospitalId = hospitalInfo.loginId || hospitalInfo.clinicId || inputLoginId;
+            req.session.hospitalInfo = hospitalInfo;
+            console.log(`✅ 로그인 성공: ${req.session.hospitalId}`);
+            return res.json({ 
+                success: true, 
+                hospitalId: req.session.hospitalId,
+                clinicName: hospitalInfo.clinicName || hospitalInfo.clinicname || ''
+            });
+        } else {
+            // 로그인 실패
+            console.log(`❌ 로그인 실패: ${inputLoginId}`);
+            return res.status(401).json({ error: '로그인 ID 또는 비밀번호가 올바르지 않습니다.' });
+        }
+    } catch (error) {
+        console.error('❌ 로그인 처리 중 오류:', error);
+        return res.status(500).json({ error: '로그인 처리 중 오류가 발생했습니다: ' + error.message });
+    }
+});
+
+// 로그아웃 라우트
+app.post('/api/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('❌ 세션 삭제 실패:', err);
+            return res.status(500).json({ error: '로그아웃 처리 중 오류가 발생했습니다.' });
+        }
+        res.json({ success: true });
+    });
+});
+
+app.get('/api/logout', (req, res) => {
+    req.session.destroy((err) => {
+        if (err) {
+            console.error('❌ 세션 삭제 실패:', err);
+            return res.status(500).json({ error: '로그아웃 처리 중 오류가 발생했습니다.' });
+        }
+        res.redirect('/login.html');
+    });
+});
 
 const ROOM_NAMES = [
     '상쾌', '편안', '행복', '두뇌', '감각', '처음1', '처음2', '미소'
@@ -48,8 +243,13 @@ const TIMER_LABEL_TO_STATUS_KEY = {
     '안내중': '안내중'
 };
 
-// 개별 방 화면용 동적 라우트
-app.get('/room/:roomName', (req, res) => {
+// 루트 경로 - 메인 페이지 (인증 필요)
+app.get('/', requireAuth, (req, res) => {
+    res.sendFile(__dirname + '/public/index.html');
+});
+
+// 개별 방 화면용 동적 라우트 (인증 필요)
+app.get('/room/:roomName', requireAuth, (req, res) => {
     const roomName = decodeURIComponent(req.params.roomName);
     
     // 유효한 방 이름인지 확인
@@ -61,8 +261,8 @@ app.get('/room/:roomName', (req, res) => {
     res.sendFile(__dirname + '/public/room.html');
 });
 
-// 문 앞 태블릿용 화면 라우트
-app.get('/room2/:roomName', (req, res) => {
+// 문 앞 태블릿용 화면 라우트 (인증 필요)
+app.get('/room2/:roomName', requireAuth, (req, res) => {
     const roomName = decodeURIComponent(req.params.roomName);
 
     if (!ROOM_NAMES.includes(roomName)) {
@@ -72,8 +272,8 @@ app.get('/room2/:roomName', (req, res) => {
     res.sendFile(__dirname + '/public/room2.html');
 });
 
-// 방별 치료 진행 상황 조회 API
-app.get('/api/room/:roomName/treatment-status', async (req, res) => {
+// 방별 치료 진행 상황 조회 API (인증 필요)
+app.get('/api/room/:roomName/treatment-status', requireAuth, async (req, res) => {
     try {
         const roomName = decodeURIComponent(req.params.roomName);
 

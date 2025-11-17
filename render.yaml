@@ -8,6 +8,12 @@ services:
       - key: NODE_ENV
         value: production
       # Render 대시보드에서 다음 환경변수들을 추가하세요:
+      # Google Sheets 로그인 설정 (필수)
+      # - GOOGLE_SHEETS_SPREADSHEET_ID
+      # - GOOGLE_SERVICE_ACCOUNT_EMAIL
+      # - GOOGLE_PRIVATE_KEY
+      # - SESSION_SECRET
+      # Airtable 설정 (기존 기능용, 선택)
       # - AIRTABLE_API_KEY
       # - AIRTABLE_BASE_ID
       # - AIRTABLE_TABLE_NAME

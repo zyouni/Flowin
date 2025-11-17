@@ -377,8 +377,21 @@
             font-size: 1rem;
             cursor: pointer;
             transition: background 0.2s;
+            margin-right: 10px;
         " onmouseover="this.style.background='#9575cd'" onmouseout="this.style.background='#b388ff'">
             🔄 이름 새로고침
+        </button>
+        <button id="logoutBtn" style="
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        " onmouseover="this.style.background='#d32f2f'" onmouseout="this.style.background='#f44336'">
+            🚪 로그아웃
         </button>
     </div>
     
@@ -774,6 +787,25 @@
     document.getElementById('refreshNames').onclick = () => {
         console.log('🔄 이름 새로고침 요청');
         socket.emit('refreshNames');
+    };
+    
+    // 로그아웃 버튼 이벤트
+    document.getElementById('logoutBtn').onclick = async () => {
+        if (confirm('로그아웃 하시겠습니까?')) {
+            try {
+                const response = await fetch('/api/logout', {
+                    method: 'POST',
+                });
+                if (response.ok) {
+                    window.location.href = '/login.html';
+                } else {
+                    alert('로그아웃에 실패했습니다.');
+                }
+            } catch (error) {
+                console.error('로그아웃 오류:', error);
+                alert('로그아웃 중 오류가 발생했습니다.');
+            }
+        }
     };
 
     // 서버에서 이름 새로고침 응답 받기
