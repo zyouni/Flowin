@@ -2,10 +2,10 @@
   "name": "web-timer",
   "version": "1.0.0",
   "description": "실시간 동기화 웹 타이머",
-  "main": "server_test.js",
+  "main": "server.js",
   "scripts": {
-    "start": "node server_test.js",
-    "dev": "nodemon server_test.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "dependencies": {
     "axios": "^1.9.0",
